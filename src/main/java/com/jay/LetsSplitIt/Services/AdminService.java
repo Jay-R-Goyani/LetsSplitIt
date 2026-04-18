@@ -1,13 +1,10 @@
 package com.jay.LetsSplitIt.Services;
 
-import com.jay.LetsSplitIt.Dto.UserStats;
 import com.jay.LetsSplitIt.Entities.User;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.time.Instant;
-import java.util.UUID;
 
 @Service
 public class AdminService {
