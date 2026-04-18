@@ -1,0 +1,31 @@
+# Copy this file to `application.yaml` in the same directory and fill in your values.
+# `application.yaml` is gitignored — never commit real secrets.
+
+spring:
+  application:
+    name: LetsSplitIt
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/letssplitit
+    username: YOUR_DB_USER
+    password: YOUR_DB_PASSWORD
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+jwt:
+  # Generate a strong secret with:   openssl rand -base64 64
+  secret: REPLACE_WITH_STRONG_BASE64_SECRET
+  expiration-ms: 86400000
+
+app:
+  cors:
+    allowed-origins: http://localhost:3000
+  admin:
+    email: admin@letssplitit.local
+    name: Administrator

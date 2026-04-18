@@ -5,10 +5,8 @@ target/
 !**/src/test/**/target/
 
 ### Secrets / local config ###
-application-local.properties
-application-*.local.properties
 application.properties
-properties.yaml
+application.yaml
 
 ### Logs ###
 *.log
