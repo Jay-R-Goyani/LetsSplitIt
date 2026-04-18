@@ -1,11 +1,16 @@
 package com.jay.LetsSplitIt.Repository;
 
-import org.springframework.data.mongodb.repository.MongoRepository;
 import com.jay.LetsSplitIt.Entities.User;
-import org.bson.types.ObjectId;
+import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
-public interface UserRepository extends MongoRepository<User,ObjectId> {
+public interface UserRepository extends JpaRepository<User, UUID> {
     Optional<User> findByEmail(String email);
+
+    List<User> findByRole(String role);
+
+    long countByRole(String role);
 }

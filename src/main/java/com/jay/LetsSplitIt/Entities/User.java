@@ -1,42 +1,64 @@
 package com.jay.LetsSplitIt.Entities;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import org.bson.types.ObjectId;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.mongodb.core.index.Indexed;
 
-import java.time.LocalDate;
+import java.time.Instant;
+import java.util.UUID;
 
+@Entity
+@Table(name = "users")
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class User {
 
     @Id
-    private ObjectId id;
+    @GeneratedValue
+    private UUID id;
 
     @NonNull
+    @Column(nullable = false)
     private String name;
 
-    @Indexed(unique = true)
     @NonNull
+    @Column(nullable = false, unique = true)
     private String email;
 
     @NonNull
     @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    @Column(nullable = false)
     private String password;
 
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
+    @Column(nullable = false)
     private String role = "USER";
 
-    private ObjectId groupId;
+    @Column(name = "created_at", updatable = false)
+    private Instant createdAt;
 
-    @CreatedDate
-    private LocalDate createdDate;
+    @Column(name = "updated_at")
+    private Instant updatedAt;
 
-    @LastModifiedDate
-    private LocalDate modifiedDate;
+    @PrePersist
+    void onCreate() {
+        Instant now = Instant.now();
+        this.createdAt = now;
+        this.updatedAt = now;
+    }
 
+    @PreUpdate
+    void onUpdate() {
+        this.updatedAt = Instant.now();
+    }
 }

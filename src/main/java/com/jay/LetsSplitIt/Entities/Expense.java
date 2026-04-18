@@ -1,33 +1,71 @@
 package com.jay.LetsSplitIt.Entities;
 
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.Column;
+import jakarta.persistence.ElementCollection;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 import lombok.NonNull;
-import org.bson.types.ObjectId;
-import org.springframework.data.annotation.CreatedDate;
-import org.springframework.data.annotation.Id;
-import org.springframework.data.annotation.LastModifiedDate;
-import org.springframework.data.mongodb.core.aggregation.ArrayOperators;
 
-import java.time.LocalDate;
+import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
+@Entity
+@Table(name = "expenses")
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class Expense {
 
     @Id
-    private ObjectId Id;
+    @GeneratedValue
+    private UUID id;
 
-    private ObjectId groupId;
+    @Column(name = "group_id")
+    private UUID groupId;
 
-    private ObjectId paidBy;
+    @NonNull
+    @Column(name = "paid_by", nullable = false)
+    private UUID paidBy;
 
-    private double amount;
+    @NonNull
+    @Column(nullable = false, precision = 12, scale = 2)
+    private BigDecimal amount;
 
-    private List<ObjectId> splitBetween;
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(
+            name = "expense_participants",
+            joinColumns = @JoinColumn(name = "expense_id")
+    )
+    @Column(name = "user_id")
+    private List<UUID> splitBetween;
 
-    private String splitType;
+    @NonNull
+    @Enumerated(EnumType.STRING)
+    @Column(name = "split_type", nullable = false, length = 20)
+    private SplitType splitType;
 
-    @CreatedDate
-    private LocalDate createdDate;
+    @Column(name = "created_at", updatable = false)
+    private Instant createdAt;
 
+    @PrePersist
+    void onCreate() {
+        this.createdAt = Instant.now();
+    }
+
+    public enum SplitType {
+        EQUAL, EXACT, PERCENTAGE, SHARES
+    }
 }
