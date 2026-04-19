@@ -59,15 +59,15 @@ public class FriendshipService {
 
     private Friendship findPendingRequest(UUID sentBy, UUID sentTo) {
         return friendshipRepository
-                .findBySentByAndSentToIdAndStatus(sentBy, sentTo, Friendship.Status.PENDING)
+                .findBySentByAndSentToAndStatus(sentBy, sentTo, Friendship.Status.PENDING)
                 .orElseThrow(() -> new NoSuchElementException("Friend request not found"));
     }
 
     private Friendship findAcceptedFriendship(UUID a, UUID b) {
         return friendshipRepository
-                .findBySentByAndSentToIdAndStatus(a, b, Friendship.Status.ACCEPTED)
+                .findBySentByAndSentToAndStatus(a, b, Friendship.Status.ACCEPTED)
                 .or(() -> friendshipRepository
-                        .findBySentByAndSentToIdAndStatus(b, a, Friendship.Status.ACCEPTED))
+                        .findBySentByAndSentToAndStatus(b, a, Friendship.Status.ACCEPTED))
                 .orElseThrow(() -> new NoSuchElementException("Friendship not found"));
     }
 }

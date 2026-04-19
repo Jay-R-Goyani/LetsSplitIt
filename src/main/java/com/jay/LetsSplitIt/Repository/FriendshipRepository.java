@@ -8,7 +8,7 @@ import java.util.UUID;
 
 public interface FriendshipRepository extends JpaRepository<Friendship, UUID> {
 
-    Optional<Friendship> findBySentByAndSentToIdAndStatus(
+    Optional<Friendship> findBySentByAndSentToAndStatus(
             UUID sentBy, UUID sentTo, Friendship.Status status);
 
 }
