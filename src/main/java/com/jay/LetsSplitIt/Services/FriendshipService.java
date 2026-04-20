@@ -24,6 +24,31 @@ public class FriendshipService {
     public void sendFriendRequest(UserDetails userDetails, UUID friendId) {
         UUID userId = currentUserId(userDetails);
 
+        if (userId.equals(friendId)) {
+            throw new IllegalArgumentException("Cannot send friend request to yourself");
+        }
+        if (!userRepository.existsById(friendId)) {
+            throw new NoSuchElementException("Target user not found: " + friendId);
+        }
+        if (friendshipRepository.existsBySentByAndSentToAndStatus(
+                userId, friendId, Friendship.Status.BLOCKED)
+            || friendshipRepository.existsBySentByAndSentToAndStatus(
+                friendId, userId, Friendship.Status.BLOCKED)) {
+            throw new IllegalStateException("Cannot send friend request: blocked");
+        }
+        if (friendshipRepository.existsBySentByAndSentToAndStatus(
+                userId, friendId, Friendship.Status.PENDING)
+            || friendshipRepository.existsBySentByAndSentToAndStatus(
+                friendId, userId, Friendship.Status.PENDING)) {
+            throw new IllegalStateException("A pending request already exists");
+        }
+        if (friendshipRepository.existsBySentByAndSentToAndStatus(
+                userId, friendId, Friendship.Status.ACCEPTED)
+            || friendshipRepository.existsBySentByAndSentToAndStatus(
+                friendId, userId, Friendship.Status.ACCEPTED)) {
+            throw new IllegalStateException("Already friends");
+        }
+
         Friendship friendship = new Friendship();
         friendship.setSentBy(userId);
         friendship.setSentTo(friendId);

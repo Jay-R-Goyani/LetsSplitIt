@@ -11,4 +11,7 @@ public interface FriendshipRepository extends JpaRepository<Friendship, UUID> {
     Optional<Friendship> findBySentByAndSentToAndStatus(
             UUID sentBy, UUID sentTo, Friendship.Status status);
 
+    boolean existsBySentByAndSentToAndStatus(
+            UUID sentBy, UUID sentTo, Friendship.Status status);
+
 }

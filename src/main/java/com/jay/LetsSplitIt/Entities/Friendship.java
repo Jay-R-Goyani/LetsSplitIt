@@ -31,6 +31,7 @@ public class Friendship {
         BLOCKED
     }
 
+    @Enumerated(EnumType.STRING)
     private Status status;
 
     @Column(name = "created_at", updatable = false)
