@@ -34,7 +34,7 @@ public class SecurityConfig {
     public SecurityConfig(
             JwtAuthFilter jwtAuthFilter,
             UserDetailsService userDetailsService,
-            @Value("${app.cors.allowed-origins:http://localhost:3000}") List<String> allowedOrigins) {
+            @Value("${app.cors.allowed-origins}") List<String> allowedOrigins) {
         this.jwtAuthFilter = jwtAuthFilter;
         this.userDetailsService = userDetailsService;
         this.allowedOrigins = allowedOrigins;

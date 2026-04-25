@@ -38,6 +38,9 @@ public class Group {
     @Column(name = "owner_id")
     private UUID ownerId;
 
+    @Column(name = "admin_id")
+    private UUID adminId;
+
     @ElementCollection(fetch = FetchType.EAGER)
     @CollectionTable(
             name = "group_members",

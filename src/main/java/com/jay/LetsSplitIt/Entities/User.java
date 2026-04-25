@@ -40,6 +40,8 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+
+
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     @Column(nullable = false)
     private String role = "USER";
