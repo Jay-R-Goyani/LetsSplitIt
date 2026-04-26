@@ -35,10 +35,10 @@ public class Group {
     @Column(nullable = false)
     private String name;
 
-    @Column(name = "owner_id")
-    private UUID ownerId;
+    @Column(name = "createdBy", nullable = false)
+    private UUID createdBy;
 
-    @Column(name = "admin_id")
+    @Column(name = "adminId", nullable = false)
     private UUID adminId;
 
     @ElementCollection(fetch = FetchType.EAGER)
@@ -46,7 +46,7 @@ public class Group {
             name = "group_members",
             joinColumns = @JoinColumn(name = "group_id")
     )
-    @Column(name = "user_id")
+    @Column(name = "memberId")
     private List<UUID> members;
 
     @Column(name = "created_at", updatable = false)

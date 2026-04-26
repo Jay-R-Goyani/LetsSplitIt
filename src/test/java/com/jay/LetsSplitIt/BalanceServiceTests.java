@@ -60,12 +60,12 @@ class BalanceServiceTests {
     }
 
     private Optional<PairBalance> findBalance(User debtor, User creditor) {
-        return pairBalanceRepository.findByDebtorIdAndCreditorId(debtor.getId(), creditor.getId());
+        return pairBalanceRepository.findByDebtorIdAndCreditorIdAndGroupIdIsNull(debtor.getId(), creditor.getId());
     }
 
     private PairBalance insertBalance(User debtor, User creditor, String amount) {
         return pairBalanceRepository.saveAndFlush(
-                new PairBalance(null, debtor.getId(), creditor.getId(), new BigDecimal(amount), null));
+                new PairBalance(null, debtor.getId(), creditor.getId(), null, new BigDecimal(amount), null));
     }
 
     private static BigDecimal bd(String s) {

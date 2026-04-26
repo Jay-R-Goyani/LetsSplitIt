@@ -30,11 +30,15 @@ public class BalanceService {
 
     @Transactional
     public void applyDebt(UUID debtorId, UUID creditorId, BigDecimal amount) {
+        applyDebt(debtorId, creditorId, amount, null);
+    }
+
+    @Transactional
+    public void applyDebt(UUID debtorId, UUID creditorId, BigDecimal amount, UUID groupId) {
         if (debtorId.equals(creditorId)) return;
         if (amount == null || amount.signum() <= 0) return;
 
-        Optional<PairBalance> oppositeOpt =
-                pairBalanceRepository.findByDebtorIdAndCreditorId(creditorId, debtorId);
+        Optional<PairBalance> oppositeOpt = findPair(creditorId, debtorId, groupId);
         if (oppositeOpt.isPresent()) {
             PairBalance opposite = oppositeOpt.get();
             int cmp = opposite.getAmount().compareTo(amount);
@@ -51,14 +55,13 @@ public class BalanceService {
             pairBalanceRepository.delete(opposite);
         }
 
-        Optional<PairBalance> existingOpt =
-                pairBalanceRepository.findByDebtorIdAndCreditorId(debtorId, creditorId);
+        Optional<PairBalance> existingOpt = findPair(debtorId, creditorId, groupId);
         if (existingOpt.isPresent()) {
             PairBalance existing = existingOpt.get();
             existing.setAmount(existing.getAmount().add(amount));
             pairBalanceRepository.save(existing);
         } else {
-            PairBalance fresh = new PairBalance(null, debtorId, creditorId, amount, null);
+            PairBalance fresh = new PairBalance(null, debtorId, creditorId, groupId, amount, null);
             pairBalanceRepository.save(fresh);
         }
     }
@@ -92,15 +95,24 @@ public class BalanceService {
     public FriendBalance getPairDetail(UserDetails userDetails, UUID friendId) {
         UUID me = currentUserId(userDetails);
 
-        Optional<PairBalance> iOwe = pairBalanceRepository.findByDebtorIdAndCreditorId(me, friendId);
-        if (iOwe.isPresent()) {
-            return new FriendBalance(friendId, iOwe.get().getAmount(), FriendBalance.Direction.I_OWE);
+        BigDecimal iOwe = sum(pairBalanceRepository.findByDebtorIdAndCreditorId(me, friendId));
+        BigDecimal owesMe = sum(pairBalanceRepository.findByDebtorIdAndCreditorId(friendId, me));
+        BigDecimal net = owesMe.subtract(iOwe);
+
+        if (net.signum() > 0) {
+            return new FriendBalance(friendId, net, FriendBalance.Direction.OWES_ME);
         }
-        Optional<PairBalance> owesMe = pairBalanceRepository.findByDebtorIdAndCreditorId(friendId, me);
-        if (owesMe.isPresent()) {
-            return new FriendBalance(friendId, owesMe.get().getAmount(), FriendBalance.Direction.OWES_ME);
+        if (net.signum() < 0) {
+            return new FriendBalance(friendId, net.negate(), FriendBalance.Direction.I_OWE);
         }
         return new FriendBalance(friendId, BigDecimal.ZERO, FriendBalance.Direction.SETTLED);
+    }
+
+    private Optional<PairBalance> findPair(UUID debtorId, UUID creditorId, UUID groupId) {
+        if (groupId == null) {
+            return pairBalanceRepository.findByDebtorIdAndCreditorIdAndGroupIdIsNull(debtorId, creditorId);
+        }
+        return pairBalanceRepository.findByDebtorIdAndCreditorIdAndGroupId(debtorId, creditorId, groupId);
     }
 
     private BigDecimal sum(List<PairBalance> balances) {

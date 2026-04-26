@@ -9,9 +9,15 @@ import java.util.UUID;
 
 public interface PairBalanceRepository extends JpaRepository<PairBalance, UUID> {
 
-    Optional<PairBalance> findByDebtorIdAndCreditorId(UUID debtorId, UUID creditorId);
+    Optional<PairBalance> findByDebtorIdAndCreditorIdAndGroupIdIsNull(UUID debtorId, UUID creditorId);
+
+    Optional<PairBalance> findByDebtorIdAndCreditorIdAndGroupId(UUID debtorId, UUID creditorId, UUID groupId);
+
+    List<PairBalance> findByDebtorIdAndCreditorId(UUID debtorId, UUID creditorId);
 
     List<PairBalance> findByDebtorId(UUID debtorId);
 
     List<PairBalance> findByCreditorId(UUID creditorId);
+
+    List<PairBalance> findByGroupId(UUID groupId);
 }

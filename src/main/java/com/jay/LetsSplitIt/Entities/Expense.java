@@ -41,6 +41,9 @@ public class Expense {
     @Column(name = "split_type", nullable = false, length = 20)
     private SplitType splitType;
 
+    @Column(name = "group_id")
+    private UUID groupId;
+
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;
 

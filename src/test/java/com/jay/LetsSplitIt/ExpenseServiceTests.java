@@ -73,7 +73,7 @@ class ExpenseServiceTests {
     }
 
     private BigDecimal pairBalanceAmount(User debtor, User creditor) {
-        return pairBalanceRepository.findByDebtorIdAndCreditorId(debtor.getId(), creditor.getId())
+        return pairBalanceRepository.findByDebtorIdAndCreditorIdAndGroupIdIsNull(debtor.getId(), creditor.getId())
                 .map(PairBalance::getAmount)
                 .orElse(null);
     }
@@ -107,7 +107,7 @@ class ExpenseServiceTests {
 
         // friend1 now owes payer 50
         assertEquals(0, pairBalanceAmount(friend1, payer).compareTo(bd("50.00")));
-        assertTrue(pairBalanceRepository.findByDebtorIdAndCreditorId(payer.getId(), friend1.getId()).isEmpty());
+        assertTrue(pairBalanceRepository.findByDebtorIdAndCreditorIdAndGroupIdIsNull(payer.getId(), friend1.getId()).isEmpty());
     }
 
     @Test
@@ -282,8 +282,8 @@ class ExpenseServiceTests {
         ));
         // payer owes friend1 30 → offsets to friend1 still owing payer 20
 
-        Optional<PairBalance> forward = pairBalanceRepository.findByDebtorIdAndCreditorId(friend1.getId(), payer.getId());
-        Optional<PairBalance> reverse = pairBalanceRepository.findByDebtorIdAndCreditorId(payer.getId(), friend1.getId());
+        Optional<PairBalance> forward = pairBalanceRepository.findByDebtorIdAndCreditorIdAndGroupIdIsNull(friend1.getId(), payer.getId());
+        Optional<PairBalance> reverse = pairBalanceRepository.findByDebtorIdAndCreditorIdAndGroupIdIsNull(payer.getId(), friend1.getId());
         assertTrue(reverse.isEmpty());
         assertEquals(0, forward.orElseThrow().getAmount().compareTo(bd("20.00")));
     }

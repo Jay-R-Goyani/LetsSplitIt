@@ -60,7 +60,7 @@ class UserTests {
     void allArgsConstructorSetsEveryField() {
         UUID id = UUID.randomUUID();
         Instant now = Instant.now();
-        User user = new User(id, "Jay", "jay@example.com", "secret", "ADMIN", now, now);
+        User user = new User(id, "Jay", "jay@example.com", "secret", "ADMIN", null, now, now);
 
         assertEquals(id, user.getId());
         assertEquals("Jay", user.getName());
@@ -75,21 +75,21 @@ class UserTests {
     void allArgsConstructorRejectsNullName() {
         Instant now = Instant.now();
         assertThrows(NullPointerException.class,
-                () -> new User(UUID.randomUUID(), null, "jay@example.com", "secret", "USER", now, now));
+                () -> new User(UUID.randomUUID(), null, "jay@example.com", "secret", "USER", null, now, now));
     }
 
     @Test
     void allArgsConstructorRejectsNullEmail() {
         Instant now = Instant.now();
         assertThrows(NullPointerException.class,
-                () -> new User(UUID.randomUUID(), "Jay", null, "secret", "USER", now, now));
+                () -> new User(UUID.randomUUID(), "Jay", null, "secret", "USER", null, now, now));
     }
 
     @Test
     void allArgsConstructorRejectsNullPassword() {
         Instant now = Instant.now();
         assertThrows(NullPointerException.class,
-                () -> new User(UUID.randomUUID(), "Jay", "jay@example.com", null, "USER", now, now));
+                () -> new User(UUID.randomUUID(), "Jay", "jay@example.com", null, "USER", null, now, now));
     }
 
     @Test
@@ -163,8 +163,8 @@ class UserTests {
     void equalsAndHashCodeUseAllFields() {
         UUID id = UUID.randomUUID();
         Instant now = Instant.now();
-        User a = new User(id, "Jay", "jay@example.com", "secret", "USER", now, now);
-        User b = new User(id, "Jay", "jay@example.com", "secret", "USER", now, now);
+        User a = new User(id, "Jay", "jay@example.com", "secret", "USER", null, now, now);
+        User b = new User(id, "Jay", "jay@example.com", "secret", "USER", null, now, now);
 
         assertEquals(a, b);
         assertEquals(a.hashCode(), b.hashCode());

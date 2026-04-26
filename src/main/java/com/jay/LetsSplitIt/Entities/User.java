@@ -1,19 +1,14 @@
 package com.jay.LetsSplitIt.Entities;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.NonNull;
 
 import java.time.Instant;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -40,11 +35,17 @@ public class User {
     @Column(nullable = false)
     private String password;
 
-
-
     @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     @Column(nullable = false)
     private String role = "USER";
+
+    @ElementCollection
+    @CollectionTable(
+            name = "users_group",
+            joinColumns = @JoinColumn(name = "user_id")
+    )
+    @Column(name = "group_id")
+    private List<UUID> memberOfGroup;
 
     @Column(name = "created_at", updatable = false)
     private Instant createdAt;

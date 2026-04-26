@@ -16,7 +16,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "pair_balances", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"debtor_id", "creditor_id"})
+        @UniqueConstraint(columnNames = {"debtor_id", "creditor_id", "group_id"})
 })
 @Data
 @NoArgsConstructor
@@ -32,6 +32,9 @@ public class PairBalance {
 
     @Column(name = "creditor_id", nullable = false)
     private UUID creditorId;
+
+    @Column(name = "group_id")
+    private UUID groupId;
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;
