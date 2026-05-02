@@ -1,0 +1,549 @@
+{
+  "info": {
+    "name": "LetsSplitIt Sanity",
+    "_postman_id": "lsi-sanity-0001",
+    "description": "End-to-end sanity flow for LetsSplitIt. Run requests top-to-bottom; tokens & IDs are captured into collection variables automatically.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "aliceToken", "value": "" },
+    { "key": "bobToken", "value": "" },
+    { "key": "carolToken", "value": "" },
+    { "key": "daveToken", "value": "" },
+    { "key": "eveToken", "value": "" },
+    { "key": "aliceId", "value": "" },
+    { "key": "bobId", "value": "" },
+    { "key": "carolId", "value": "" },
+    { "key": "daveId", "value": "" },
+    { "key": "eveId", "value": "" },
+    { "key": "groupId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "1. Auth",
+      "item": [
+        {
+          "name": "Register Alice",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.collectionVariables.set('aliceToken', pm.response.json().token);"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth","register"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Alice\",\n  \"email\": \"alice@x.com\",\n  \"password\": \"pass1234\"\n}" }
+          }
+        },
+        {
+          "name": "Register Bob",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.collectionVariables.set('bobToken', pm.response.json().token);"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth","register"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Bob\",\n  \"email\": \"bob@x.com\",\n  \"password\": \"pass1234\"\n}" }
+          }
+        },
+        {
+          "name": "Register Carol",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.collectionVariables.set('carolToken', pm.response.json().token);"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth","register"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Carol\",\n  \"email\": \"carol@x.com\",\n  \"password\": \"pass1234\"\n}" }
+          }
+        },
+        {
+          "name": "Register Dave",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.collectionVariables.set('daveToken', pm.response.json().token);"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth","register"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Dave\",\n  \"email\": \"dave@x.com\",\n  \"password\": \"pass1234\"\n}" }
+          }
+        },
+        {
+          "name": "Login Alice (optional)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/login", "host": ["{{baseUrl}}"], "path": ["auth","login"] },
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"alice@x.com\",\n  \"password\": \"pass1234\"\n}" }
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Users (capture IDs)",
+      "item": [
+        {
+          "name": "GET /me as Alice",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.collectionVariables.set('aliceId', pm.response.json().id);"
+            ]}
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/user/me", "host": ["{{baseUrl}}"], "path": ["api","v1","user","me"] }
+          }
+        },
+        {
+          "name": "GET /me as Bob",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.collectionVariables.set('bobId', pm.response.json().id);"
+            ]}
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{bobToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/user/me", "host": ["{{baseUrl}}"], "path": ["api","v1","user","me"] }
+          }
+        },
+        {
+          "name": "GET /me as Carol",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.collectionVariables.set('carolId', pm.response.json().id);"
+            ]}
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{carolToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/user/me", "host": ["{{baseUrl}}"], "path": ["api","v1","user","me"] }
+          }
+        },
+        {
+          "name": "GET /me as Dave",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.collectionVariables.set('daveId', pm.response.json().id);"
+            ]}
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{daveToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/user/me", "host": ["{{baseUrl}}"], "path": ["api","v1","user","me"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Friendships",
+      "item": [
+        {
+          "name": "Alice -> Bob (request)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/friendships/requests/{{bobId}}", "host": ["{{baseUrl}}"], "path": ["api","friendships","requests","{{bobId}}"] }
+          }
+        },
+        {
+          "name": "Alice -> Carol (request)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/friendships/requests/{{carolId}}", "host": ["{{baseUrl}}"], "path": ["api","friendships","requests","{{carolId}}"] }
+          }
+        },
+        {
+          "name": "Alice -> Dave (request)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/friendships/requests/{{daveId}}", "host": ["{{baseUrl}}"], "path": ["api","friendships","requests","{{daveId}}"] }
+          }
+        },
+        {
+          "name": "Bob accepts Alice",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{bobToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/friendships/requests/{{aliceId}}/accept", "host": ["{{baseUrl}}"], "path": ["api","friendships","requests","{{aliceId}}","accept"] }
+          }
+        },
+        {
+          "name": "Carol accepts Alice",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{carolToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/friendships/requests/{{aliceId}}/accept", "host": ["{{baseUrl}}"], "path": ["api","friendships","requests","{{aliceId}}","accept"] }
+          }
+        },
+        {
+          "name": "Dave accepts Alice",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{daveToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/friendships/requests/{{aliceId}}/accept", "host": ["{{baseUrl}}"], "path": ["api","friendships","requests","{{aliceId}}","accept"] }
+          }
+        },
+        {
+          "name": "Bob -> Carol (request)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{bobToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/friendships/requests/{{carolId}}", "host": ["{{baseUrl}}"], "path": ["api","friendships","requests","{{carolId}}"] }
+          }
+        },
+        {
+          "name": "Bob -> Dave (request)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{bobToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/friendships/requests/{{daveId}}", "host": ["{{baseUrl}}"], "path": ["api","friendships","requests","{{daveId}}"] }
+          }
+        },
+        {
+          "name": "Carol -> Dave (request)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{carolToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/friendships/requests/{{daveId}}", "host": ["{{baseUrl}}"], "path": ["api","friendships","requests","{{daveId}}"] }
+          }
+        },
+        {
+          "name": "Carol accepts Bob",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{carolToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/friendships/requests/{{bobId}}/accept", "host": ["{{baseUrl}}"], "path": ["api","friendships","requests","{{bobId}}","accept"] }
+          }
+        },
+        {
+          "name": "Dave accepts Bob",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{daveToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/friendships/requests/{{bobId}}/accept", "host": ["{{baseUrl}}"], "path": ["api","friendships","requests","{{bobId}}","accept"] }
+          }
+        },
+        {
+          "name": "Dave accepts Carol",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{daveToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/friendships/requests/{{carolId}}/accept", "host": ["{{baseUrl}}"], "path": ["api","friendships","requests","{{carolId}}","accept"] }
+          }
+        },
+        {
+          "name": "Reject sample (skip)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{daveToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/friendships/requests/{{bobId}}/reject", "host": ["{{baseUrl}}"], "path": ["api","friendships","requests","{{bobId}}","reject"] }
+          }
+        },
+        {
+          "name": "Block sample (skip)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{daveToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/friendships/{{bobId}}/block", "host": ["{{baseUrl}}"], "path": ["api","friendships","{{bobId}}","block"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Groups",
+      "item": [
+        {
+          "name": "Create group (Alice = admin)",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.collectionVariables.set('groupId', pm.response.json().id);"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{aliceToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/groups", "host": ["{{baseUrl}}"], "path": ["groups"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Goa Trip\",\n  \"selectedMembers\": [\"{{bobId}}\", \"{{carolId}}\", \"{{daveId}}\"]\n}" }
+          }
+        },
+        {
+          "name": "List my groups (Alice)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": { "raw": "{{baseUrl}}/groups", "host": ["{{baseUrl}}"], "path": ["groups"] }
+          }
+        },
+        {
+          "name": "Get group by id",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": { "raw": "{{baseUrl}}/groups/{{groupId}}", "host": ["{{baseUrl}}"], "path": ["groups","{{groupId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. Expenses",
+      "item": [
+        {
+          "name": "Individual: Alice pays 40 EQUAL with Bob",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{aliceToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/api/expenses", "host": ["{{baseUrl}}"], "path": ["api","expenses"] },
+            "body": { "mode": "raw", "raw": "{\n  \"amount\": 40,\n  \"splitType\": \"EQUAL\",\n  \"participants\": [\n    {\"userId\": \"{{aliceId}}\", \"value\": 1},\n    {\"userId\": \"{{bobId}}\",   \"value\": 1}\n  ]\n}" }
+          }
+        },
+        {
+          "name": "Group: Alice 90 EQUAL among Alice/Bob/Carol",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{aliceToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/groups/{{groupId}}/expenses", "host": ["{{baseUrl}}"], "path": ["groups","{{groupId}}","expenses"] },
+            "body": { "mode": "raw", "raw": "{\n  \"amount\": 90,\n  \"splitType\": \"EQUAL\",\n  \"participants\": [\n    {\"userId\": \"{{aliceId}}\", \"value\": 1},\n    {\"userId\": \"{{bobId}}\",   \"value\": 1},\n    {\"userId\": \"{{carolId}}\", \"value\": 1}\n  ]\n}" }
+          }
+        },
+        {
+          "name": "Group: Bob 60 EXACT (20/20/20)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{bobToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/groups/{{groupId}}/expenses", "host": ["{{baseUrl}}"], "path": ["groups","{{groupId}}","expenses"] },
+            "body": { "mode": "raw", "raw": "{\n  \"amount\": 60,\n  \"splitType\": \"EXACT\",\n  \"participants\": [\n    {\"userId\": \"{{bobId}}\",   \"value\": 20},\n    {\"userId\": \"{{carolId}}\", \"value\": 20},\n    {\"userId\": \"{{daveId}}\",  \"value\": 20}\n  ]\n}" }
+          }
+        },
+        {
+          "name": "Group: Carol 30 PERCENTAGE (50/50)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{carolToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/groups/{{groupId}}/expenses", "host": ["{{baseUrl}}"], "path": ["groups","{{groupId}}","expenses"] },
+            "body": { "mode": "raw", "raw": "{\n  \"amount\": 30,\n  \"splitType\": \"PERCENTAGE\",\n  \"participants\": [\n    {\"userId\": \"{{aliceId}}\", \"value\": 50},\n    {\"userId\": \"{{carolId}}\", \"value\": 50}\n  ]\n}" }
+          }
+        },
+        {
+          "name": "Group: Dave 40 SHARES (1/1/2)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{daveToken}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "url": { "raw": "{{baseUrl}}/groups/{{groupId}}/expenses", "host": ["{{baseUrl}}"], "path": ["groups","{{groupId}}","expenses"] },
+            "body": { "mode": "raw", "raw": "{\n  \"amount\": 40,\n  \"splitType\": \"SHARES\",\n  \"participants\": [\n    {\"userId\": \"{{daveId}}\",  \"value\": 1},\n    {\"userId\": \"{{bobId}}\",   \"value\": 1},\n    {\"userId\": \"{{carolId}}\", \"value\": 2}\n  ]\n}" }
+          }
+        },
+        {
+          "name": "List group expenses",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": { "raw": "{{baseUrl}}/groups/{{groupId}}/expenses", "host": ["{{baseUrl}}"], "path": ["groups","{{groupId}}","expenses"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. Balances",
+      "item": [
+        {
+          "name": "Summary (Alice)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/balances/me", "host": ["{{baseUrl}}"], "path": ["api","balances","me"] }
+          }
+        },
+        {
+          "name": "Friends list (Alice)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/balances/friends", "host": ["{{baseUrl}}"], "path": ["api","balances","friends"] }
+          }
+        },
+        {
+          "name": "Pair detail Alice <-> Bob",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/balances/friends/{{bobId}}", "host": ["{{baseUrl}}"], "path": ["api","balances","friends","{{bobId}}"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. Group lifecycle (guards & simplify)",
+      "item": [
+        {
+          "name": "Remove Bob (expect 4xx, has dues)",
+          "request": {
+            "method": "DELETE",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": { "raw": "{{baseUrl}}/groups/{{groupId}}/members/{{bobId}}", "host": ["{{baseUrl}}"], "path": ["groups","{{groupId}}","members","{{bobId}}"] }
+          }
+        },
+        {
+          "name": "Bob leaves (expect 4xx, has dues)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{bobToken}}" }],
+            "url": { "raw": "{{baseUrl}}/groups/{{groupId}}/leave", "host": ["{{baseUrl}}"], "path": ["groups","{{groupId}}","leave"] }
+          }
+        },
+        {
+          "name": "Simplify group debts",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": { "raw": "{{baseUrl}}/groups/{{groupId}}/simplify-debts", "host": ["{{baseUrl}}"], "path": ["groups","{{groupId}}","simplify-debts"] }
+          }
+        },
+        {
+          "name": "Balances after simplify (Alice)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/balances/friends", "host": ["{{baseUrl}}"], "path": ["api","balances","friends"] }
+          }
+        },
+        {
+          "name": "Register Eve",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.collectionVariables.set('eveToken', pm.response.json().token);"
+            ]}
+          }],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{baseUrl}}/auth/register", "host": ["{{baseUrl}}"], "path": ["auth","register"] },
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Eve\",\n  \"email\": \"eve@x.com\",\n  \"password\": \"pass1234\"\n}" }
+          }
+        },
+        {
+          "name": "GET /me as Eve",
+          "event": [{
+            "listen": "test",
+            "script": { "type": "text/javascript", "exec": [
+              "pm.collectionVariables.set('eveId', pm.response.json().id);"
+            ]}
+          }],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{eveToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/v1/user/me", "host": ["{{baseUrl}}"], "path": ["api","v1","user","me"] }
+          }
+        },
+        {
+          "name": "Alice -> Eve (request)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/friendships/requests/{{eveId}}", "host": ["{{baseUrl}}"], "path": ["api","friendships","requests","{{eveId}}"] }
+          }
+        },
+        {
+          "name": "Eve accepts Alice",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{eveToken}}" }],
+            "url": { "raw": "{{baseUrl}}/api/friendships/requests/{{aliceId}}/accept", "host": ["{{baseUrl}}"], "path": ["api","friendships","requests","{{aliceId}}","accept"] }
+          }
+        },
+        {
+          "name": "Add Eve to group",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": { "raw": "{{baseUrl}}/groups/{{groupId}}/members/{{eveId}}", "host": ["{{baseUrl}}"], "path": ["groups","{{groupId}}","members","{{eveId}}"] }
+          }
+        },
+        {
+          "name": "Eve leaves (clean, no dues)",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Authorization", "value": "Bearer {{eveToken}}" }],
+            "url": { "raw": "{{baseUrl}}/groups/{{groupId}}/leave", "host": ["{{baseUrl}}"], "path": ["groups","{{groupId}}","leave"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Weather (sanity ping)",
+      "item": [
+        {
+          "name": "Weather by city (Mumbai)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/weather/city?name=Mumbai",
+              "host": ["{{baseUrl}}"],
+              "path": ["weather","city"],
+              "query": [{ "key": "name", "value": "Mumbai" }]
+            }
+          }
+        },
+        {
+          "name": "Weather by coords",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{aliceToken}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/weather/current?lat=19.0760&lon=72.8777",
+              "host": ["{{baseUrl}}"],
+              "path": ["weather","current"],
+              "query": [
+                { "key": "lat", "value": "19.0760" },
+                { "key": "lon", "value": "72.8777" }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

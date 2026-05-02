@@ -4,7 +4,9 @@ import com.jay.LetsSplitIt.Dto.ExpenseRequest;
 import com.jay.LetsSplitIt.Dto.ExpenseResponse;
 import com.jay.LetsSplitIt.Entities.Expense;
 import com.jay.LetsSplitIt.Entities.Group;
+import com.jay.LetsSplitIt.Entities.PairBalance;
 import com.jay.LetsSplitIt.Repository.ExpenseRepository;
+import com.jay.LetsSplitIt.Services.BalanceService;
 import com.jay.LetsSplitIt.Services.ExpenseService;
 import com.jay.LetsSplitIt.Services.GroupService;
 import org.springframework.http.ResponseEntity;
@@ -26,13 +28,16 @@ public class GroupController {
     private final GroupService groupService;
     private final ExpenseService expenseService;
     private final ExpenseRepository expenseRepository;
+    private final BalanceService balanceService;
 
     public GroupController(GroupService groupService,
                            ExpenseService expenseService,
-                           ExpenseRepository expenseRepository) {
+                           ExpenseRepository expenseRepository,
+                           BalanceService balanceService) {
         this.groupService = groupService;
         this.expenseService = expenseService;
         this.expenseRepository = expenseRepository;
+        this.balanceService = balanceService;
     }
 
     @GetMapping("/groups")
@@ -67,6 +72,12 @@ public class GroupController {
         return ResponseEntity.ok(groupService.removeMember(principal.getUsername(), groupId, userId));
     }
 
+    @PostMapping("/groups/{groupId}/leave")
+    public ResponseEntity<Group> leaveGroup(@AuthenticationPrincipal UserDetails principal,
+                                            @PathVariable UUID groupId) {
+        return ResponseEntity.ok(groupService.leaveGroup(principal.getUsername(), groupId));
+    }
+
     @PostMapping("/groups/{groupId}/expenses")
     public ResponseEntity<ExpenseResponse> addGroupExpense(@AuthenticationPrincipal UserDetails principal,
                                                            @PathVariable UUID groupId,
@@ -77,6 +88,12 @@ public class GroupController {
     @GetMapping("/groups/{groupId}/expenses")
     public List<Expense> listGroupExpenses(@PathVariable UUID groupId) {
         return expenseRepository.findByGroupId(groupId);
+    }
+
+    @PostMapping("/groups/{groupId}/simplify-debts")
+    public ResponseEntity<List<PairBalance>> simplifyGroupDebts(@AuthenticationPrincipal UserDetails principal,
+                                                                @PathVariable UUID groupId) {
+        return ResponseEntity.ok(balanceService.simplifyGroupDebts(principal, groupId));
     }
 
     public record CreateGroupRequest(String name,List<UUID> selectedMembers) {}

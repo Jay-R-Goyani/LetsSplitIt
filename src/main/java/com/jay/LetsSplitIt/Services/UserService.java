@@ -39,6 +39,11 @@ public class UserService {
         if (existingUser.isPresent()) {
             throw new IllegalArgumentException("User already exists");
         }
+        if (user.getRole() == null || user.getRole().isBlank()) {
+            user.setRole("USER");
+        } else if (!ALLOWED_ROLES.contains(user.getRole())) {
+            throw new IllegalArgumentException("Invalid role: " + user.getRole());
+        }
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         return userRepository.save(user);
     }

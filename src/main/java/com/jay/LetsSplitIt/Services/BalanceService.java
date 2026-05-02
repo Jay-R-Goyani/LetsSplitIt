@@ -2,10 +2,13 @@ package com.jay.LetsSplitIt.Services;
 
 import com.jay.LetsSplitIt.Dto.BalanceSummary;
 import com.jay.LetsSplitIt.Dto.FriendBalance;
+import com.jay.LetsSplitIt.Entities.Group;
 import com.jay.LetsSplitIt.Entities.PairBalance;
 import com.jay.LetsSplitIt.Entities.User;
+import com.jay.LetsSplitIt.Repository.GroupRepository;
 import com.jay.LetsSplitIt.Repository.PairBalanceRepository;
 import com.jay.LetsSplitIt.Repository.UserRepository;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
@@ -13,8 +16,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Optional;
+import java.util.PriorityQueue;
 import java.util.UUID;
 
 @Service
@@ -22,10 +30,14 @@ public class BalanceService {
 
     private final PairBalanceRepository pairBalanceRepository;
     private final UserRepository userRepository;
+    private final GroupRepository groupRepository;
 
-    BalanceService(PairBalanceRepository pairBalanceRepository, UserRepository userRepository) {
+    BalanceService(PairBalanceRepository pairBalanceRepository,
+                   UserRepository userRepository,
+                   GroupRepository groupRepository) {
         this.pairBalanceRepository = pairBalanceRepository;
         this.userRepository = userRepository;
+        this.groupRepository = groupRepository;
     }
 
     @Transactional
@@ -107,6 +119,57 @@ public class BalanceService {
         }
         return new FriendBalance(friendId, BigDecimal.ZERO, FriendBalance.Direction.SETTLED);
     }
+
+    @Transactional
+    public List<PairBalance> simplifyGroupDebts(UserDetails userDetails, UUID groupId) {
+        UUID me = currentUserId(userDetails);
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new NoSuchElementException("Group not found: " + groupId));
+        if (!group.getMembers().contains(me)) {
+            throw new AccessDeniedException("Only group members can simplify debts");
+        }
+
+        List<PairBalance> existing = pairBalanceRepository.findByGroupId(groupId);
+        if (existing.isEmpty()) {
+            return List.of();
+        }
+
+        Map<UUID, BigDecimal> net = new HashMap<>();
+        for (PairBalance pb : existing) {
+            net.merge(pb.getCreditorId(), pb.getAmount(), BigDecimal::add);
+            net.merge(pb.getDebtorId(), pb.getAmount().negate(), BigDecimal::add);
+        }
+
+        Comparator<NetEntry> byAmountDesc = (a, b) -> b.amount.compareTo(a.amount);
+        PriorityQueue<NetEntry> creditors = new PriorityQueue<>(byAmountDesc);
+        PriorityQueue<NetEntry> debtors = new PriorityQueue<>(byAmountDesc);
+        for (Map.Entry<UUID, BigDecimal> e : net.entrySet()) {
+            int sgn = e.getValue().signum();
+            if (sgn > 0) {
+                creditors.add(new NetEntry(e.getKey(), e.getValue()));
+            } else if (sgn < 0) {
+                debtors.add(new NetEntry(e.getKey(), e.getValue().negate()));
+            }
+        }
+
+        List<PairBalance> simplified = new ArrayList<>();
+        while (!creditors.isEmpty() && !debtors.isEmpty()) {
+            NetEntry c = creditors.poll();
+            NetEntry d = debtors.poll();
+            BigDecimal pay = c.amount.min(d.amount);
+            simplified.add(new PairBalance(null, d.id, c.id, groupId, pay, null));
+            BigDecimal cRem = c.amount.subtract(pay);
+            BigDecimal dRem = d.amount.subtract(pay);
+            if (cRem.signum() > 0) creditors.add(new NetEntry(c.id, cRem));
+            if (dRem.signum() > 0) debtors.add(new NetEntry(d.id, dRem));
+        }
+
+        pairBalanceRepository.deleteAllInBatch(existing);
+        pairBalanceRepository.flush();
+        return pairBalanceRepository.saveAll(simplified);
+    }
+
+    private record NetEntry(UUID id, BigDecimal amount) {}
 
     private Optional<PairBalance> findPair(UUID debtorId, UUID creditorId, UUID groupId) {
         if (groupId == null) {

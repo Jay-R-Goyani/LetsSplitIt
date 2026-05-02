@@ -2,9 +2,11 @@ package com.jay.LetsSplitIt.Services;
 
 import com.jay.LetsSplitIt.Entities.Friendship;
 import com.jay.LetsSplitIt.Entities.Group;
+import com.jay.LetsSplitIt.Entities.PairBalance;
 import com.jay.LetsSplitIt.Entities.User;
 import com.jay.LetsSplitIt.Repository.FriendshipRepository;
 import com.jay.LetsSplitIt.Repository.GroupRepository;
+import com.jay.LetsSplitIt.Repository.PairBalanceRepository;
 import com.jay.LetsSplitIt.Repository.UserRepository;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -24,13 +26,16 @@ public class GroupService {
     private GroupRepository groupRepository;
     private UserRepository userRepository;
     private FriendshipRepository friendshipRepository;
+    private PairBalanceRepository pairBalanceRepository;
 
     public GroupService(GroupRepository groupRepository,
                         UserRepository userRepository,
-                        FriendshipRepository friendshipRepository) {
+                        FriendshipRepository friendshipRepository,
+                        PairBalanceRepository pairBalanceRepository) {
         this.groupRepository = groupRepository;
         this.userRepository = userRepository;
         this.friendshipRepository = friendshipRepository;
+        this.pairBalanceRepository = pairBalanceRepository;
     }
 
     public List<Group> getMyGroups(String email) {
@@ -136,14 +141,45 @@ public class GroupService {
         if (memberId.equals(group.getAdminId())) {
             throw new IllegalArgumentException("Admin cannot be removed from the group");
         }
-        if (!group.getMembers().remove(memberId)) {
+        if (!group.getMembers().contains(memberId)) {
             throw new NoSuchElementException("User is not a member of this group");
         }
+        ensureNoPendingBalances(groupId, memberId, "Member has pending balances in this group and cannot be removed until settled");
+        return detachMember(group, memberId);
+    }
 
+    @Transactional
+    public Group leaveGroup(String requesterEmail, UUID groupId) {
+        User requester = userRepository.findByEmail(requesterEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found for : " + requesterEmail));
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new NoSuchElementException("Group not found: " + groupId));
+
+        UUID memberId = requester.getId();
+        if (!group.getMembers().contains(memberId)) {
+            throw new NoSuchElementException("You are not a member of this group");
+        }
+        if (memberId.equals(group.getAdminId())) {
+            throw new IllegalStateException("Admin cannot leave the group; transfer admin rights first");
+        }
+        ensureNoPendingBalances(groupId, memberId, "You have pending balances in this group and cannot leave until settled");
+        return detachMember(group, memberId);
+    }
+
+    private void ensureNoPendingBalances(UUID groupId, UUID memberId, String message) {
+        for (PairBalance pb : pairBalanceRepository.findByGroupId(groupId)) {
+            if (memberId.equals(pb.getDebtorId()) || memberId.equals(pb.getCreditorId())) {
+                throw new IllegalStateException(message);
+            }
+        }
+    }
+
+    private Group detachMember(Group group, UUID memberId) {
+        group.getMembers().remove(memberId);
         Group saved = groupRepository.save(group);
         userRepository.findById(memberId).ifPresent(user -> {
             if (user.getMemberOfGroup() != null) {
-                user.getMemberOfGroup().remove(groupId);
+                user.getMemberOfGroup().remove(group.getId());
                 userRepository.save(user);
             }
         });
