@@ -2,12 +2,16 @@ package com.jay.LetsSplitIt.Controller;
 
 import com.jay.LetsSplitIt.Dto.BalanceSummary;
 import com.jay.LetsSplitIt.Dto.FriendBalance;
+import com.jay.LetsSplitIt.Dto.SettleRequest;
+import com.jay.LetsSplitIt.Dto.SettleResponse;
 import com.jay.LetsSplitIt.Services.BalanceService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -38,5 +42,26 @@ public class BalanceController {
     public ResponseEntity<FriendBalance> friendDetail(@AuthenticationPrincipal UserDetails userDetails,
                                                       @PathVariable UUID friendId) {
         return ResponseEntity.ok(balanceService.getPairDetail(userDetails, friendId));
+    }
+
+    @PostMapping("/settle/friend/{friendId}")
+    public ResponseEntity<SettleResponse> settleFriend(@AuthenticationPrincipal UserDetails userDetails,
+                                                       @PathVariable UUID friendId,
+                                                       @RequestBody SettleRequest request) {
+        return ResponseEntity.ok(balanceService.settleFriend(userDetails, friendId, request.amount()));
+    }
+
+    @PostMapping("/settle/group/{groupId}/{friendId}")
+    public ResponseEntity<SettleResponse> settleGroup(@AuthenticationPrincipal UserDetails userDetails,
+                                                      @PathVariable UUID groupId,
+                                                      @PathVariable UUID friendId,
+                                                      @RequestBody SettleRequest request) {
+        return ResponseEntity.ok(balanceService.settleGroup(userDetails, groupId, friendId, request.amount()));
+    }
+
+    @PostMapping("/settle/full/{friendId}")
+    public ResponseEntity<SettleResponse> settleFull(@AuthenticationPrincipal UserDetails userDetails,
+                                                     @PathVariable UUID friendId) {
+        return ResponseEntity.ok(balanceService.settleFull(userDetails, friendId));
     }
 }

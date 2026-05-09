@@ -8,12 +8,15 @@ import com.jay.LetsSplitIt.Entities.Expense;
 import com.jay.LetsSplitIt.Entities.Group;
 import com.jay.LetsSplitIt.Entities.SharedExpense;
 import com.jay.LetsSplitIt.Entities.User;
+import com.jay.LetsSplitIt.Dto.ExpenseCreatedEvent;
 import com.jay.LetsSplitIt.Repository.ExpenseRepository;
 import com.jay.LetsSplitIt.Repository.GroupRepository;
 import com.jay.LetsSplitIt.Repository.ShareExpenseRepository;
 import com.jay.LetsSplitIt.Repository.UserRepository;
 import com.jay.LetsSplitIt.Services.Split.SplitStrategy;
 import com.jay.LetsSplitIt.Services.Split.SplitStrategyRegistry;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
@@ -34,19 +37,22 @@ public class ExpenseService {
     private final GroupRepository groupRepository;
     private final SplitStrategyRegistry registry;
     private final BalanceService balanceService;
+    private final ApplicationEventPublisher eventPublisher;
 
     ExpenseService(ExpenseRepository expenseRepository,
                    ShareExpenseRepository shareExpenseRepository,
                    UserRepository userRepository,
                    GroupRepository groupRepository,
                    SplitStrategyRegistry registry,
-                   BalanceService balanceService) {
+                   BalanceService balanceService,
+                   ApplicationEventPublisher eventPublisher) {
         this.expenseRepository = expenseRepository;
         this.shareExpenseRepository = shareExpenseRepository;
         this.userRepository = userRepository;
         this.groupRepository = groupRepository;
         this.registry = registry;
         this.balanceService = balanceService;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -76,13 +82,21 @@ public class ExpenseService {
 
         List<SharedExpense> sharedRows = shares.stream()
                 .filter(share -> !share.userId().equals(paidBy))
-                .map(share -> new SharedExpense(null, saved.getId(), share.userId(), share.amountOwed()))
+                .map(share -> new SharedExpense(null, saved, share.userId(), share.amountOwed()))
                 .toList();
         shareExpenseRepository.saveAll(sharedRows);
 
         for (SharedExpense row : sharedRows) {
             balanceService.applyDebt(row.getUserId(), paidBy, row.getAmount(), groupId);
         }
+
+        eventPublisher.publishEvent(new ExpenseCreatedEvent(
+                saved.getId(),
+                saved.getPaidBy(),
+                saved.getSplitType(),
+                saved.getAmount(),
+                shares
+        ));
 
         return new ExpenseResponse(
                 saved.getId(),
@@ -91,6 +105,27 @@ public class ExpenseService {
                 saved.getSplitType(),
                 shares
         );
+    }
+
+    @Transactional
+    public void deleteExpense(UserDetails userDetails, UUID expenseId) {
+        UUID me = currentUserId(userDetails);
+        Expense expense = expenseRepository.findById(expenseId)
+                .orElseThrow(() -> new NoSuchElementException("Expense not found: " + expenseId));
+
+        if (!expense.getPaidBy().equals(me)) {
+            throw new AccessDeniedException("Only the expense creator can delete this expense");
+        }
+
+        List<SharedExpense> shares = shareExpenseRepository.findByExpenseId(expenseId);
+        UUID groupId = expense.getGroupId();
+        UUID paidBy = expense.getPaidBy();
+
+        for (SharedExpense row : shares) {
+            balanceService.applyDebt(paidBy, row.getUserId(), row.getAmount(), groupId);
+        }
+
+        expenseRepository.delete(expense);
     }
 
     private void validateGroupParticipants(UUID groupId, UUID paidBy, List<SplitInput> participants) {

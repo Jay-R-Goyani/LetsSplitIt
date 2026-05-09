@@ -2,12 +2,15 @@ package com.jay.LetsSplitIt.Services;
 
 import com.jay.LetsSplitIt.Dto.BalanceSummary;
 import com.jay.LetsSplitIt.Dto.FriendBalance;
+import com.jay.LetsSplitIt.Dto.SettleResponse;
+import com.jay.LetsSplitIt.Dto.SettlementCreatedEvent;
 import com.jay.LetsSplitIt.Entities.Group;
 import com.jay.LetsSplitIt.Entities.PairBalance;
 import com.jay.LetsSplitIt.Entities.User;
 import com.jay.LetsSplitIt.Repository.GroupRepository;
 import com.jay.LetsSplitIt.Repository.PairBalanceRepository;
 import com.jay.LetsSplitIt.Repository.UserRepository;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -31,13 +34,16 @@ public class BalanceService {
     private final PairBalanceRepository pairBalanceRepository;
     private final UserRepository userRepository;
     private final GroupRepository groupRepository;
+    private final ApplicationEventPublisher eventPublisher;
 
     BalanceService(PairBalanceRepository pairBalanceRepository,
                    UserRepository userRepository,
-                   GroupRepository groupRepository) {
+                   GroupRepository groupRepository,
+                   ApplicationEventPublisher eventPublisher) {
         this.pairBalanceRepository = pairBalanceRepository;
         this.userRepository = userRepository;
         this.groupRepository = groupRepository;
+        this.eventPublisher = eventPublisher;
     }
 
     @Transactional
@@ -167,6 +173,82 @@ public class BalanceService {
         pairBalanceRepository.deleteAllInBatch(existing);
         pairBalanceRepository.flush();
         return pairBalanceRepository.saveAll(simplified);
+    }
+
+    @Transactional
+    public SettleResponse settleFriend(UserDetails userDetails, UUID friendId, BigDecimal amount) {
+        UUID me = currentUserId(userDetails);
+        validateSettlement(me, friendId, amount);
+        applyDebt(friendId, me, amount, null);
+        SettleResponse response = new SettleResponse(me, friendId, null, amount, SettleResponse.Scope.FRIEND);
+        publishSettlement(response);
+        return response;
+    }
+
+    @Transactional
+    public SettleResponse settleGroup(UserDetails userDetails, UUID groupId, UUID friendId, BigDecimal amount) {
+        UUID me = currentUserId(userDetails);
+        validateSettlement(me, friendId, amount);
+        Group group = groupRepository.findById(groupId)
+                .orElseThrow(() -> new NoSuchElementException("Group not found: " + groupId));
+        if (!group.getMembers().contains(me)) {
+            throw new AccessDeniedException("Only group members can settle inside this group");
+        }
+        if (!group.getMembers().contains(friendId)) {
+            throw new IllegalArgumentException("Friend is not a member of this group");
+        }
+        applyDebt(friendId, me, amount, groupId);
+        SettleResponse response = new SettleResponse(me, friendId, groupId, amount, SettleResponse.Scope.GROUP);
+        publishSettlement(response);
+        return response;
+    }
+
+    @Transactional
+    public SettleResponse settleFull(UserDetails userDetails, UUID friendId) {
+        UUID me = currentUserId(userDetails);
+        if (me.equals(friendId)) {
+            throw new IllegalArgumentException("Cannot settle with self");
+        }
+
+        List<PairBalance> iOwe = pairBalanceRepository.findByDebtorIdAndCreditorId(me, friendId);
+        List<PairBalance> theyOwe = pairBalanceRepository.findByDebtorIdAndCreditorId(friendId, me);
+
+        BigDecimal myDebt = sum(iOwe);
+        BigDecimal theirDebt = sum(theyOwe);
+        BigDecimal net = myDebt.subtract(theirDebt);
+
+        List<PairBalance> all = new ArrayList<>(iOwe);
+        all.addAll(theyOwe);
+        if (!all.isEmpty()) {
+            pairBalanceRepository.deleteAllInBatch(all);
+        }
+
+        SettleResponse response;
+        if (net.signum() > 0) {
+            response = new SettleResponse(me, friendId, null, net, SettleResponse.Scope.FULL);
+        } else if (net.signum() < 0) {
+            response = new SettleResponse(friendId, me, null, net.negate(), SettleResponse.Scope.FULL);
+        } else {
+            response = new SettleResponse(me, friendId, null, BigDecimal.ZERO, SettleResponse.Scope.FULL);
+        }
+        publishSettlement(response);
+        return response;
+    }
+
+    private void publishSettlement(SettleResponse response) {
+        if (response.amountSettled() == null || response.amountSettled().signum() <= 0) {
+            return;
+        }
+        eventPublisher.publishEvent(new SettlementCreatedEvent(response));
+    }
+
+    private void validateSettlement(UUID me, UUID friendId, BigDecimal amount) {
+        if (me.equals(friendId)) {
+            throw new IllegalArgumentException("Cannot settle with self");
+        }
+        if (amount == null || amount.signum() <= 0) {
+            throw new IllegalArgumentException("Settlement amount must be positive");
+        }
     }
 
     private record NetEntry(UUID id, BigDecimal amount) {}

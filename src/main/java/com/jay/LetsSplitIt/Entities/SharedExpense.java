@@ -21,8 +21,9 @@ public class SharedExpense {
     @GeneratedValue
     private UUID id;
 
-    @Column(name = "expense_id", nullable = false)
-    private UUID expenseId;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "expense_id", nullable = false)
+    private Expense expense;
 
     @Column(name = "user_id", nullable = false)
     private UUID userId;
