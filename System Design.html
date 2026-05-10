@@ -1,0 +1,1364 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=1480" />
+<title>letsSplitIt — System Design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&family=JetBrains+Mono:wght@400;500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#f5f1e8;
+    --paper-2:#efe9dc;
+    --ink:#161310;
+    --ink-2:#3a342c;
+    --rule:#161310;
+    --muted:#6c6358;
+    --accent:#c2410c;        /* terracotta */
+    --accent-2:#1e3a8a;      /* indigo */
+    --accent-3:#15803d;      /* moss */
+    --accent-4:#7c2d12;      /* burnt */
+    --tag:#f0e9d6;
+    --hl:#fde68a;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--paper);color:var(--ink);
+    font-family:"Public Sans","Helvetica Neue",sans-serif; font-size:14px; line-height:1.45;
+    -webkit-font-smoothing:antialiased;
+  }
+  body{
+    background-image:
+      radial-gradient(circle at 1px 1px, rgba(22,19,16,.08) 1px, transparent 0);
+    background-size: 22px 22px;
+  }
+  .page{ max-width: 1440px; margin: 0 auto; padding: 56px 56px 96px; }
+  .serif{ font-family:"Newsreader", Georgia, serif; font-weight:500; letter-spacing:-.005em; }
+  .mono{ font-family:"JetBrains Mono", ui-monospace, monospace; }
+
+  /* ───── header ───── */
+  header.cover{
+    border:1.5px solid var(--ink);
+    background:#fbf7ec;
+    padding: 28px 32px 26px;
+    position:relative;
+    box-shadow: 6px 6px 0 0 var(--ink);
+    margin-bottom: 56px;
+  }
+  .cover .stamp{
+    position:absolute; top:14px; right:18px;
+    border:1.5px solid var(--accent);
+    color:var(--accent); padding:4px 10px;
+    font-family:"JetBrains Mono",monospace; font-size:11px;
+    transform: rotate(2deg); letter-spacing:.08em;
+  }
+  .cover .meta{
+    display:flex; gap:32px; align-items:flex-end; flex-wrap:wrap;
+  }
+  .cover h1{ font-family:"Newsreader",serif; font-weight:500; font-size:64px; line-height:.95; margin:0;
+    letter-spacing:-.02em;
+  }
+  .cover h1 em{ font-style:italic; color:var(--accent); font-weight:500;}
+  .cover .sub{ font-family:"Newsreader",serif; font-style:italic; font-size:20px; color:var(--ink-2); margin-top:6px;}
+  .cover dl{ margin:0; display:grid; grid-template-columns: repeat(4, max-content); gap: 4px 36px; align-self:flex-end;}
+  .cover dt{ font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--muted);}
+  .cover dd{ margin:0; font-family:"JetBrains Mono",monospace; font-size:13px; font-weight:600;}
+  .cover .summary{
+    margin-top: 22px; padding-top: 18px; border-top: 1px dashed var(--ink);
+    display:grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 28px;
+  }
+  .cover .summary p{ margin:0; font-size:14.5px; color:var(--ink-2); max-width:62ch;}
+  .cover .summary h4{ margin:0 0 6px; font-family:"JetBrains Mono",monospace; font-size:10px;
+    letter-spacing:.14em; text-transform:uppercase; color:var(--muted);}
+  .cover .summary ul{ margin:0; padding:0; list-style:none;}
+  .cover .summary li{ font-family:"JetBrains Mono",monospace; font-size:12px; padding:2px 0;}
+  .cover .summary li::before{ content:"›  "; color:var(--accent);}
+
+  /* ───── section heading ───── */
+  section{ margin-bottom: 76px; }
+  .sect-head{ display:flex; align-items:flex-end; gap:18px; margin-bottom:22px;}
+  .sect-head .num{
+    font-family:"JetBrains Mono",monospace; font-size:13px; font-weight:600;
+    border:1.5px solid var(--ink); padding:4px 10px; background:#fff;
+  }
+  .sect-head h2{ font-family:"Newsreader",serif; font-weight:500; font-size:38px; margin:0; line-height:1; letter-spacing:-.01em;}
+  .sect-head h2 em{ font-style:italic; color:var(--accent);}
+  .sect-head .desc{ font-style:italic; color:var(--ink-2); font-family:"Newsreader",serif; font-size:17px;
+    margin-left:auto; max-width: 56ch; text-align:right;}
+  .sect-rule{ height:1.5px; background:var(--ink); margin-bottom:28px; position:relative;}
+  .sect-rule::after{ content:""; position:absolute; right:0; top:-3px; width:8px; height:8px; background:var(--accent); border-radius:50%;}
+
+  /* ───── diagram cards ───── */
+  .diagram-frame{
+    border:1.5px solid var(--ink); background:#fbf7ec;
+    box-shadow: 6px 6px 0 0 var(--ink);
+    padding: 22px;
+  }
+  .diagram-frame.flush{ padding: 0; overflow:hidden;}
+  .diagram-corners{ position:relative; }
+  .diagram-corners::before, .diagram-corners::after,
+  .diagram-corners > .dc-tl, .diagram-corners > .dc-tr{
+    position:absolute; width:12px; height:12px; border:1.5px solid var(--ink);
+  }
+  .legend{
+    display:flex; gap:18px; flex-wrap:wrap; padding:14px 22px 18px;
+    border-top:1.5px dashed var(--ink); margin: 0 -22px -22px;
+    font-family:"JetBrains Mono",monospace; font-size:11px;
+  }
+  .legend .key{ display:flex; align-items:center; gap:8px;}
+  .legend .sw{ width:14px; height:14px; border:1.5px solid var(--ink); display:inline-block;}
+
+  /* svg stroke defaults */
+  svg .ink{ stroke: var(--ink); }
+  svg text{ font-family:"Public Sans", sans-serif; }
+  svg .mono-t{ font-family:"JetBrains Mono", monospace; }
+  svg .serif-t{ font-family:"Newsreader", serif; }
+
+  /* tab bar for diagrams (jump links) */
+  .nav-strip{
+    display:flex; gap:0; border:1.5px solid var(--ink); background:#fff;
+    margin-bottom: 36px; box-shadow: 4px 4px 0 0 var(--ink);
+    font-family:"JetBrains Mono",monospace; font-size:12px;
+  }
+  .nav-strip a{
+    flex:1; padding:11px 14px; text-align:center; color:var(--ink);
+    text-decoration:none; border-right:1.5px solid var(--ink);
+    display:flex; gap:10px; justify-content:center; align-items:center;
+  }
+  .nav-strip a:last-child{ border-right:0; }
+  .nav-strip a:hover{ background:var(--paper-2); }
+  .nav-strip a span{ color:var(--accent); }
+
+  /* footnotes / annotations */
+  .annot{
+    font-family:"Newsreader",serif; font-style:italic; color:var(--ink-2);
+    font-size:14.5px;
+  }
+  .pill{
+    display:inline-block; border:1.2px solid var(--ink);
+    padding:1px 8px; background:var(--tag); border-radius:999px;
+    font-family:"JetBrains Mono",monospace; font-size:11px;
+  }
+
+  /* small captions under diagrams */
+  .cap{
+    margin-top:14px; display:flex; justify-content:space-between; gap:24px;
+    font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--muted);
+    letter-spacing:.06em; text-transform:uppercase;
+  }
+
+  /* responsive shrink so diagrams stay readable */
+  @media (max-width: 1200px){ .page{ padding: 40px 24px 80px;} .cover h1{ font-size:48px;} }
+
+  /* ───── PRINT ───── */
+  @page { size: A3 landscape; margin: 12mm; }
+  @media print {
+    html, body {
+      background: #f5f1e8 !important;
+      background-image: none !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+      color-adjust: exact !important;
+    }
+    .page { max-width: none; padding: 0; }
+    .nav-strip { display: none !important; }
+    header.cover { box-shadow: none !important; page-break-after: page; break-after: page; }
+    section { page-break-before: page; break-before: page; margin-bottom: 0; padding-top: 4mm; }
+    section, .diagram-frame, .sect-head, .cap, footer, table, tr, svg {
+      break-inside: avoid; page-break-inside: avoid;
+    }
+    .diagram-frame { box-shadow: none !important; }
+    /* keep solid header bands & accent fills printing */
+    rect, path, polygon, line, ellipse, text, tspan { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    a { color: inherit !important; text-decoration: none !important; }
+    footer { page-break-before: avoid; break-before: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+<!-- ═══════════════════════ COVER ═══════════════════════ -->
+<header class="cover">
+  <span class="stamp mono">DOC · SD-001 · v1</span>
+  <div class="meta">
+    <div>
+      <h1 class="serif">lets<em>Split</em>It</h1>
+      <div class="sub">System design — architecture, data model, and core flows</div>
+    </div>
+    <dl>
+      <dt>Stack</dt><dd>Spring Boot 4 / Java 21</dd>
+      <dt>Datastore</dt><dd>PostgreSQL · JPA</dd>
+      <dt>Auth</dt><dd>JWT · BCrypt</dd>
+      <dt>Style</dt><dd>Layered REST</dd>
+    </dl>
+  </div>
+  <div class="summary">
+    <p>letsSplitIt is a stateless REST backend for tracking shared expenses between friends and groups. It splits bills four ways (equal, exact, %, shares) via a strategy registry, maintains running pair-balances, supports group debt simplification, and emits domain events that fan out to email notifications.</p>
+    <div>
+      <h4>Domains</h4>
+      <ul><li>Auth · Users</li><li>Friendships</li><li>Groups</li><li>Expenses · Splits</li><li>Balances · Settlements</li></ul>
+    </div>
+    <div>
+      <h4>Patterns</h4>
+      <ul><li>Layered (MVC)</li><li>Strategy</li><li>Repository</li><li>Domain Events</li><li>Filter chain</li></ul>
+    </div>
+    <div>
+      <h4>Cross-cutting</h4>
+      <ul><li>Global ex. handler</li><li>JWT filter</li><li>Method security</li><li>Async mail</li><li>Bootstrap admin</li></ul>
+    </div>
+  </div>
+</header>
+
+<nav class="nav-strip">
+  <a href="#arch"><span>01</span> System Architecture</a>
+  <a href="#uml"><span>02</span> UML / Class Model</a>
+  <a href="#er"><span>03</span> Data Model (ER)</a>
+  <a href="#flow"><span>04</span> Sequence — Create Expense</a>
+  <a href="#strategy"><span>05</span> Split Strategy</a>
+</nav>
+
+<!-- ═══════════════════════ 01 · SYSTEM ARCHITECTURE ═══════════════════════ -->
+<section id="arch">
+  <div class="sect-head">
+    <span class="num">01</span>
+    <h2 class="serif">System <em>architecture</em></h2>
+    <span class="desc">A classic layered Spring Boot service.<br/>Requests flow top→bottom through the JWT filter into thin controllers and service-layer business logic.</span>
+  </div>
+  <div class="sect-rule"></div>
+
+  <div class="diagram-frame">
+    <svg viewBox="0 0 1360 900" width="100%" style="display:block">
+      <defs>
+        <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#161310"/>
+        </marker>
+        <marker id="arrA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#c2410c"/>
+        </marker>
+        <marker id="arrB" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10 z" fill="#1e3a8a"/>
+        </marker>
+        <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+          <line x1="0" y1="0" x2="0" y2="6" stroke="#161310" stroke-width="1" opacity=".18"/>
+        </pattern>
+      </defs>
+
+      <!-- title strip -->
+      <text x="20" y="28" class="mono-t" font-size="11" letter-spacing="2" fill="#6c6358">FIG 1.0  ·  REQUEST PATH  ·  CLIENT → JWT FILTER → CONTROLLER → SERVICE → REPOSITORY → POSTGRES</text>
+
+      <!-- ─── CLIENT TIER ─── -->
+      <g>
+        <rect x="40" y="60" width="220" height="84" fill="#fff" stroke="#161310" stroke-width="1.5"/>
+        <text x="56" y="86" class="serif-t" font-size="20" font-weight="500">Client</text>
+        <text x="56" y="108" class="mono-t" font-size="11" fill="#6c6358">Web · Mobile · Postman</text>
+        <text x="56" y="128" class="mono-t" font-size="11" fill="#161310">HTTP + JSON · Bearer JWT</text>
+      </g>
+
+      <!-- arrow client -> edge -->
+      <line x1="260" y1="102" x2="320" y2="102" stroke="#161310" stroke-width="1.5" marker-end="url(#arr)"/>
+
+      <!-- ─── EDGE / SECURITY LAYER ─── -->
+      <g>
+        <rect x="320" y="60" width="1000" height="120" fill="#fbf7ec" stroke="#161310" stroke-width="1.5"/>
+        <text x="336" y="82" class="mono-t" font-size="10" letter-spacing="2" fill="#6c6358">EDGE  ·  SECURITY FILTER CHAIN</text>
+
+        <!-- CORS -->
+        <rect x="340" y="98" width="170" height="64" fill="#fff" stroke="#161310" stroke-width="1.2"/>
+        <text x="350" y="118" class="serif-t" font-size="15">CORS Filter</text>
+        <text x="350" y="135" class="mono-t" font-size="10" fill="#6c6358">SecurityConfig</text>
+        <text x="350" y="150" class="mono-t" font-size="10" fill="#6c6358">app.cors.allowed-origins</text>
+
+        <!-- JwtAuthFilter -->
+        <rect x="525" y="98" width="200" height="64" fill="#fff" stroke="#c2410c" stroke-width="1.5"/>
+        <text x="535" y="118" class="serif-t" font-size="15" fill="#c2410c">JwtAuthFilter</text>
+        <text x="535" y="135" class="mono-t" font-size="10" fill="#6c6358">OncePerRequestFilter</text>
+        <text x="535" y="150" class="mono-t" font-size="10" fill="#6c6358">Bearer → Authentication</text>
+
+        <!-- JwtService -->
+        <rect x="740" y="98" width="170" height="64" fill="#fff" stroke="#161310" stroke-width="1.2"/>
+        <text x="750" y="118" class="serif-t" font-size="15">JwtService</text>
+        <text x="750" y="135" class="mono-t" font-size="10" fill="#6c6358">jjwt 0.12 · HS-secret</text>
+        <text x="750" y="150" class="mono-t" font-size="10" fill="#6c6358">issue · validate · parse</text>
+
+        <!-- AuthorizationFilter -->
+        <rect x="925" y="98" width="190" height="64" fill="#fff" stroke="#161310" stroke-width="1.2"/>
+        <text x="935" y="118" class="serif-t" font-size="15">Authorization</text>
+        <text x="935" y="135" class="mono-t" font-size="10" fill="#6c6358">/auth/**, /hello → public</text>
+        <text x="935" y="150" class="mono-t" font-size="10" fill="#6c6358">/admin/** → ROLE_ADMIN</text>
+
+        <!-- GlobalExHandler -->
+        <rect x="1130" y="98" width="170" height="64" fill="#fff" stroke="#161310" stroke-width="1.2" stroke-dasharray="4 3"/>
+        <text x="1140" y="118" class="serif-t" font-size="15">@ControllerAdvice</text>
+        <text x="1140" y="135" class="mono-t" font-size="10" fill="#6c6358">GlobalExceptionHandler</text>
+        <text x="1140" y="150" class="mono-t" font-size="10" fill="#6c6358">→ uniform error JSON</text>
+
+        <!-- internal flow arrows -->
+        <line x1="510" y1="130" x2="525" y2="130" stroke="#161310" stroke-width="1.2" marker-end="url(#arr)"/>
+        <line x1="725" y1="130" x2="740" y2="130" stroke="#161310" stroke-width="1.2" marker-end="url(#arr)"/>
+        <line x1="910" y1="130" x2="925" y2="130" stroke="#161310" stroke-width="1.2" marker-end="url(#arr)"/>
+      </g>
+
+      <!-- arrow edge -> controller layer -->
+      <line x1="820" y1="180" x2="820" y2="220" stroke="#161310" stroke-width="1.5" marker-end="url(#arr)"/>
+
+      <!-- ─── CONTROLLER TIER ─── -->
+      <g>
+        <rect x="40" y="220" width="1280" height="130" fill="none" stroke="#161310" stroke-width="1.5"/>
+        <rect x="40" y="220" width="1280" height="22" fill="#161310"/>
+        <text x="54" y="237" class="mono-t" font-size="11" letter-spacing="2" fill="#fbf7ec">REST CONTROLLERS  ·  @RestController  ·  thin / mapping → service</text>
+
+        <!-- 8 controllers in 2 rows -->
+        <g font-family="JetBrains Mono" font-size="10">
+          <!-- row 1 -->
+          <g><rect x="56" y="252" width="184" height="38" fill="#fff" stroke="#161310"/><text x="66" y="269" class="serif-t" font-size="13">AuthController</text><text x="66" y="283" fill="#6c6358">/auth · register · login</text></g>
+          <g><rect x="252" y="252" width="184" height="38" fill="#fff" stroke="#161310"/><text x="262" y="269" class="serif-t" font-size="13">UserController</text><text x="262" y="283" fill="#6c6358">/api/v1/user/me</text></g>
+          <g><rect x="448" y="252" width="184" height="38" fill="#fff" stroke="#161310"/><text x="458" y="269" class="serif-t" font-size="13">FriendshipController</text><text x="458" y="283" fill="#6c6358">/api/friendships/**</text></g>
+          <g><rect x="644" y="252" width="184" height="38" fill="#fff" stroke="#161310"/><text x="654" y="269" class="serif-t" font-size="13">GroupController</text><text x="654" y="283" fill="#6c6358">/groups/** · members · expenses</text></g>
+          <g><rect x="840" y="252" width="184" height="38" fill="#fff" stroke="#161310"/><text x="850" y="269" class="serif-t" font-size="13">ExpenseController</text><text x="850" y="283" fill="#6c6358">/api/expenses/**</text></g>
+          <g><rect x="1036" y="252" width="184" height="38" fill="#fff" stroke="#161310"/><text x="1046" y="269" class="serif-t" font-size="13">BalanceController</text><text x="1046" y="283" fill="#6c6358">/api/balances · /settle</text></g>
+
+          <!-- row 2 -->
+          <g><rect x="56" y="298" width="184" height="38" fill="#fff" stroke="#161310"/><text x="66" y="315" class="serif-t" font-size="13" fill="#c2410c">AdminController</text><text x="66" y="329" fill="#6c6358">/admin/** · ROLE_ADMIN</text></g>
+          <g><rect x="252" y="298" width="184" height="38" fill="#fff" stroke="#161310"/><text x="262" y="315" class="serif-t" font-size="13">WeatherController</text><text x="262" y="329" fill="#6c6358">/weather/** · external</text></g>
+          <g><rect x="448" y="298" width="184" height="38" fill="#fff" stroke="#161310" stroke-dasharray="3 3"/><text x="458" y="315" class="serif-t" font-size="13">HeartBeatController</text><text x="458" y="329" fill="#6c6358">/hello · liveness</text></g>
+        </g>
+      </g>
+
+      <!-- arrow controller -> service -->
+      <line x1="820" y1="350" x2="820" y2="390" stroke="#161310" stroke-width="1.5" marker-end="url(#arr)"/>
+
+      <!-- ─── SERVICE TIER ─── -->
+      <g>
+        <rect x="40" y="390" width="900" height="220" fill="#f5f1e8" stroke="#161310" stroke-width="1.5"/>
+        <rect x="40" y="390" width="900" height="22" fill="#161310"/>
+        <text x="54" y="407" class="mono-t" font-size="11" letter-spacing="2" fill="#fbf7ec">SERVICE LAYER  ·  @Service  ·  @Transactional business logic</text>
+
+        <!-- service blocks -->
+        <g>
+          <rect x="56" y="424" width="200" height="78" fill="#fff" stroke="#161310"/>
+          <text x="68" y="446" class="serif-t" font-size="16">ExpenseService</text>
+          <text x="68" y="464" class="mono-t" font-size="10" fill="#6c6358">create · delete · activity</text>
+          <text x="68" y="478" class="mono-t" font-size="10" fill="#6c6358">→ SplitStrategyRegistry</text>
+          <text x="68" y="492" class="mono-t" font-size="10" fill="#6c6358">→ BalanceService.applyDebt</text>
+
+          <rect x="268" y="424" width="200" height="78" fill="#fff" stroke="#161310"/>
+          <text x="280" y="446" class="serif-t" font-size="16">BalanceService</text>
+          <text x="280" y="464" class="mono-t" font-size="10" fill="#6c6358">applyDebt · settle{F,G,Full}</text>
+          <text x="280" y="478" class="mono-t" font-size="10" fill="#6c6358">simplifyGroupDebts (heap)</text>
+          <text x="280" y="492" class="mono-t" font-size="10" fill="#6c6358">summary · friend balances</text>
+
+          <rect x="480" y="424" width="200" height="78" fill="#fff" stroke="#161310"/>
+          <text x="492" y="446" class="serif-t" font-size="16">GroupService</text>
+          <text x="492" y="464" class="mono-t" font-size="10" fill="#6c6358">CRUD · add/remove member</text>
+          <text x="492" y="478" class="mono-t" font-size="10" fill="#6c6358">leave · group expenses</text>
+
+          <rect x="692" y="424" width="232" height="78" fill="#fff" stroke="#161310"/>
+          <text x="704" y="446" class="serif-t" font-size="16">FriendshipService</text>
+          <text x="704" y="464" class="mono-t" font-size="10" fill="#6c6358">send · accept · reject · block</text>
+          <text x="704" y="478" class="mono-t" font-size="10" fill="#6c6358">FSM: PENDING→ACCEPTED→BLOCKED</text>
+
+          <rect x="56" y="514" width="200" height="78" fill="#fff" stroke="#161310"/>
+          <text x="68" y="536" class="serif-t" font-size="16">UserService</text>
+          <text x="68" y="554" class="mono-t" font-size="10" fill="#6c6358">register · profile</text>
+          <text x="68" y="568" class="mono-t" font-size="10" fill="#6c6358">CustomUserDetailsService</text>
+
+          <rect x="268" y="514" width="200" height="78" fill="#fff" stroke="#161310"/>
+          <text x="280" y="536" class="serif-t" font-size="16">AdminService</text>
+          <text x="280" y="554" class="mono-t" font-size="10" fill="#6c6358">listUsers · gated</text>
+          <text x="280" y="568" class="mono-t" font-size="10" fill="#6c6358">AdminBootstrap @PostConstruct</text>
+
+          <rect x="480" y="514" width="200" height="78" fill="#fff" stroke="#1e3a8a" stroke-width="1.5"/>
+          <text x="492" y="536" class="serif-t" font-size="16" fill="#1e3a8a">MailService</text>
+          <text x="492" y="554" class="mono-t" font-size="10" fill="#6c6358">JavaMailSender · @Async</text>
+          <text x="492" y="568" class="mono-t" font-size="10" fill="#6c6358">expense · settlement notif.</text>
+
+          <rect x="692" y="514" width="232" height="78" fill="#fff" stroke="#161310"/>
+          <text x="704" y="536" class="serif-t" font-size="16">WeatherService</text>
+          <text x="704" y="554" class="mono-t" font-size="10" fill="#6c6358">RestClient · WeatherStack API</text>
+          <text x="704" y="568" class="mono-t" font-size="10" fill="#6c6358">RestClientConfig bean</text>
+        </g>
+      </g>
+
+      <!-- ─── STRATEGY SUB-COMPONENT ─── -->
+      <g>
+        <rect x="960" y="390" width="360" height="220" fill="#fbf7ec" stroke="#161310" stroke-width="1.5"/>
+        <rect x="960" y="390" width="360" height="22" fill="#c2410c"/>
+        <text x="974" y="407" class="mono-t" font-size="11" letter-spacing="2" fill="#fbf7ec">STRATEGY  ·  Services/Split</text>
+
+        <rect x="978" y="424" width="324" height="44" fill="#fff" stroke="#c2410c" stroke-width="1.5"/>
+        <text x="990" y="442" class="serif-t" font-size="14">SplitStrategyRegistry</text>
+        <text x="990" y="458" class="mono-t" font-size="10" fill="#6c6358">Map&lt;SplitType, SplitStrategy&gt; · get(type)</text>
+
+        <line x1="1140" y1="468" x2="1140" y2="488" stroke="#c2410c" stroke-width="1.5" marker-end="url(#arrA)"/>
+
+        <rect x="978" y="488" width="324" height="32" fill="#fff" stroke="#161310"/>
+        <text x="990" y="508" class="mono-t" font-size="12">«interface» SplitStrategy</text>
+
+        <g>
+          <rect x="978" y="528" width="76" height="38" fill="#fff" stroke="#161310"/><text x="985" y="544" class="mono-t" font-size="10">Equal</text><text x="985" y="557" class="mono-t" font-size="9" fill="#6c6358">EQUAL</text>
+          <rect x="1060" y="528" width="76" height="38" fill="#fff" stroke="#161310"/><text x="1067" y="544" class="mono-t" font-size="10">Exact</text><text x="1067" y="557" class="mono-t" font-size="9" fill="#6c6358">EXACT</text>
+          <rect x="1142" y="528" width="76" height="38" fill="#fff" stroke="#161310"/><text x="1149" y="544" class="mono-t" font-size="10">Percent</text><text x="1149" y="557" class="mono-t" font-size="9" fill="#6c6358">PERCENTAGE</text>
+          <rect x="1224" y="528" width="76" height="38" fill="#fff" stroke="#161310"/><text x="1231" y="544" class="mono-t" font-size="10">Shares</text><text x="1231" y="557" class="mono-t" font-size="9" fill="#6c6358">SHARES</text>
+        </g>
+
+        <text x="978" y="585" class="mono-t" font-size="10" fill="#6c6358">Spring auto-collects beans into the registry</text>
+        <text x="978" y="600" class="mono-t" font-size="10" fill="#6c6358">via constructor injection of List&lt;SplitStrategy&gt;.</text>
+      </g>
+
+      <!-- arrow service -> repo -->
+      <line x1="490" y1="610" x2="490" y2="650" stroke="#161310" stroke-width="1.5" marker-end="url(#arr)"/>
+
+      <!-- ─── REPOSITORY TIER ─── -->
+      <g>
+        <rect x="40" y="650" width="900" height="100" fill="none" stroke="#161310" stroke-width="1.5"/>
+        <rect x="40" y="650" width="900" height="22" fill="#161310"/>
+        <text x="54" y="667" class="mono-t" font-size="11" letter-spacing="2" fill="#fbf7ec">REPOSITORY LAYER  ·  Spring Data JPA  ·  JpaRepository&lt;T, UUID&gt;</text>
+
+        <g font-family="JetBrains Mono" font-size="10">
+          <g><rect x="56" y="684" width="124" height="50" fill="#fff" stroke="#161310"/><text x="64" y="700" class="serif-t" font-size="12">UserRepo</text><text x="64" y="716" fill="#6c6358">findByEmail</text><text x="64" y="729" fill="#6c6358">existsBy…</text></g>
+          <g><rect x="192" y="684" width="124" height="50" fill="#fff" stroke="#161310"/><text x="200" y="700" class="serif-t" font-size="12">FriendshipRepo</text><text x="200" y="716" fill="#6c6358">bySentBy/To</text><text x="200" y="729" fill="#6c6358">+ status</text></g>
+          <g><rect x="328" y="684" width="124" height="50" fill="#fff" stroke="#161310"/><text x="336" y="700" class="serif-t" font-size="12">GroupRepo</text><text x="336" y="716" fill="#6c6358">findById</text><text x="336" y="729" fill="#6c6358">findByMember</text></g>
+          <g><rect x="464" y="684" width="124" height="50" fill="#fff" stroke="#161310"/><text x="472" y="700" class="serif-t" font-size="12">ExpenseRepo</text><text x="472" y="716" fill="#6c6358">activityForUser</text><text x="472" y="729" fill="#6c6358">activityWithFriend</text></g>
+          <g><rect x="600" y="684" width="124" height="50" fill="#fff" stroke="#161310"/><text x="608" y="700" class="serif-t" font-size="12">SharedExpRepo</text><text x="608" y="716" fill="#6c6358">findByExpenseId</text></g>
+          <g><rect x="736" y="684" width="124" height="50" fill="#fff" stroke="#161310"/><text x="744" y="700" class="serif-t" font-size="12">PairBalanceRepo</text><text x="744" y="716" fill="#6c6358">byDebtor/Creditor</text><text x="744" y="729" fill="#6c6358">byGroupId · @Version</text></g>
+        </g>
+        <rect x="56" y="744" width="124" height="0" fill="#fff"/>
+      </g>
+
+      <!-- arrow repo -> db -->
+      <line x1="490" y1="750" x2="490" y2="790" stroke="#161310" stroke-width="1.5" marker-end="url(#arr)"/>
+
+      <!-- ─── DB ─── -->
+      <g>
+        <ellipse cx="200" cy="820" rx="120" ry="14" fill="#fff" stroke="#161310" stroke-width="1.5"/>
+        <path d="M80,820 L80,860 A120,14 0 0 0 320,860 L320,820" fill="#fff" stroke="#161310" stroke-width="1.5"/>
+        <ellipse cx="200" cy="860" rx="120" ry="14" fill="none" stroke="#161310" stroke-width="1.2" stroke-dasharray="2 3"/>
+        <text x="200" y="836" text-anchor="middle" class="serif-t" font-size="16">PostgreSQL</text>
+        <text x="200" y="852" text-anchor="middle" class="mono-t" font-size="10" fill="#6c6358">9 tables · UUID PKs · @Version</text>
+
+        <!-- mail server -->
+        <rect x="380" y="800" width="220" height="80" fill="#fff" stroke="#1e3a8a" stroke-width="1.5"/>
+        <text x="392" y="822" class="serif-t" font-size="15" fill="#1e3a8a">SMTP / Mail Server</text>
+        <text x="392" y="840" class="mono-t" font-size="10" fill="#6c6358">JavaMailSender (Spring Mail)</text>
+        <text x="392" y="855" class="mono-t" font-size="10" fill="#6c6358">async — does not block tx</text>
+        <text x="392" y="870" class="mono-t" font-size="10" fill="#6c6358">notif. on Expense / Settlement</text>
+
+        <!-- weather -->
+        <rect x="650" y="800" width="220" height="80" fill="#fff" stroke="#15803d" stroke-width="1.5"/>
+        <text x="662" y="822" class="serif-t" font-size="15" fill="#15803d">WeatherStack API</text>
+        <text x="662" y="840" class="mono-t" font-size="10" fill="#6c6358">External REST · access key</text>
+        <text x="662" y="855" class="mono-t" font-size="10" fill="#6c6358">via Spring RestClient</text>
+        <text x="662" y="870" class="mono-t" font-size="10" fill="#6c6358">decoupled side feature</text>
+      </g>
+
+      <!-- ─── EVENT BUS (right rail) ─── -->
+      <g>
+        <rect x="960" y="650" width="360" height="230" fill="#fbf7ec" stroke="#1e3a8a" stroke-width="1.5"/>
+        <rect x="960" y="650" width="360" height="22" fill="#1e3a8a"/>
+        <text x="974" y="667" class="mono-t" font-size="11" letter-spacing="2" fill="#fbf7ec">DOMAIN EVENTS  ·  ApplicationEventPublisher</text>
+
+        <rect x="978" y="686" width="324" height="38" fill="#fff" stroke="#1e3a8a"/>
+        <text x="988" y="704" class="serif-t" font-size="14" fill="#1e3a8a">ExpenseCreatedEvent</text>
+        <text x="988" y="718" class="mono-t" font-size="10" fill="#6c6358">payerId · title · amount · shares</text>
+
+        <rect x="978" y="730" width="324" height="38" fill="#fff" stroke="#1e3a8a"/>
+        <text x="988" y="748" class="serif-t" font-size="14" fill="#1e3a8a">SettlementCreatedEvent</text>
+        <text x="988" y="762" class="mono-t" font-size="10" fill="#6c6358">payer · receiver · amount · scope</text>
+
+        <line x1="1140" y1="772" x2="1140" y2="792" stroke="#1e3a8a" stroke-width="1.5" marker-end="url(#arrB)"/>
+
+        <rect x="978" y="792" width="158" height="64" fill="#fff" stroke="#1e3a8a"/>
+        <text x="988" y="810" class="serif-t" font-size="12" fill="#1e3a8a">ExpenseCreated</text>
+        <text x="988" y="824" class="serif-t" font-size="12" fill="#1e3a8a">MailListener</text>
+        <text x="988" y="843" class="mono-t" font-size="9" fill="#6c6358">@EventListener @Async</text>
+
+        <rect x="1144" y="792" width="158" height="64" fill="#fff" stroke="#1e3a8a"/>
+        <text x="1154" y="810" class="serif-t" font-size="12" fill="#1e3a8a">SettlementCreated</text>
+        <text x="1154" y="824" class="serif-t" font-size="12" fill="#1e3a8a">MailListener</text>
+        <text x="1154" y="843" class="mono-t" font-size="9" fill="#6c6358">@EventListener @Async</text>
+
+        <text x="978" y="872" class="mono-t" font-size="10" fill="#6c6358">decoupled — services don't know about mail.</text>
+      </g>
+
+      <!-- annotations / arrows between rails -->
+      <line x1="940" y1="500" x2="960" y2="500" stroke="#c2410c" stroke-width="1.5" stroke-dasharray="3 3" marker-end="url(#arrA)"/>
+      <line x1="940" y1="744" x2="960" y2="744" stroke="#1e3a8a" stroke-width="1.5" stroke-dasharray="3 3" marker-end="url(#arrB)"/>
+    </svg>
+
+    <div class="legend">
+      <div class="key"><span class="sw" style="background:#fff"></span>Component / class</div>
+      <div class="key"><span class="sw" style="background:#fbf7ec"></span>Layer / sub-system boundary</div>
+      <div class="key"><span class="sw" style="background:#161310"></span>Layer header</div>
+      <div class="key"><span class="sw" style="border-color:#c2410c"></span>Strategy pattern</div>
+      <div class="key"><span class="sw" style="border-color:#1e3a8a"></span>Async / event-driven path</div>
+      <div class="key"><span class="sw" style="border-color:#15803d"></span>External integration</div>
+      <div class="key"><span class="sw" style="border-style:dashed"></span>Cross-cutting concern</div>
+    </div>
+  </div>
+
+  <div class="cap">
+    <span>FIG 1.0 — Layered architecture · Spring Boot 4 · Java 21 · PostgreSQL</span>
+    <span>Source: src/main/java/com/jay/LetsSplitIt</span>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════ 02 · UML / CLASS DIAGRAM ═══════════════════════ -->
+<section id="uml">
+  <div class="sect-head">
+    <span class="num">02</span>
+    <h2 class="serif">UML <em>class diagram</em></h2>
+    <span class="desc">Persistent entities, their fields and relationships.<br/>UUID primary keys throughout; soft references for cross-aggregate links.</span>
+  </div>
+  <div class="sect-rule"></div>
+
+  <div class="diagram-frame">
+    <svg viewBox="0 0 1360 1000" width="100%" style="display:block">
+      <defs>
+        <marker id="diam" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="14" markerHeight="14" orient="auto">
+          <path d="M0,6 L6,0 L12,6 L6,12 z" fill="#fff" stroke="#161310" stroke-width="1.2"/>
+        </marker>
+        <marker id="diamFilled" viewBox="0 0 12 12" refX="11" refY="6" markerWidth="14" markerHeight="14" orient="auto">
+          <path d="M0,6 L6,0 L12,6 L6,12 z" fill="#161310"/>
+        </marker>
+        <marker id="arrLine" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10" fill="none" stroke="#161310" stroke-width="1.2"/>
+        </marker>
+      </defs>
+
+      <text x="20" y="24" class="mono-t" font-size="11" letter-spacing="2" fill="#6c6358">FIG 2.0  ·  DOMAIN CLASS MODEL  ·  @Entity classes + enums + value objects</text>
+
+      <!-- ─── User ─── -->
+      <g>
+        <rect x="40" y="60" width="260" height="240" fill="#fff" stroke="#161310" stroke-width="1.5"/>
+        <rect x="40" y="60" width="260" height="32" fill="#161310"/>
+        <text x="54" y="81" class="serif-t" font-size="16" fill="#fbf7ec">«entity»  User</text>
+        <text x="248" y="81" class="mono-t" font-size="10" fill="#fbf7ec">users</text>
+        <line x1="40" y1="92" x2="300" y2="92" stroke="#161310"/>
+        <g class="mono-t" font-size="11">
+          <text x="54" y="110">- id : UUID  «PK»</text>
+          <text x="54" y="126">- name : String</text>
+          <text x="54" y="142">- email : String  «unique»</text>
+          <text x="54" y="158">- password : String  «write-only»</text>
+          <text x="54" y="174">- role : String  = "USER"</text>
+          <text x="54" y="190">- memberOfGroup : List&lt;UUID&gt;</text>
+          <text x="54" y="206">- createdAt : Instant</text>
+          <text x="54" y="222">- updatedAt : Instant</text>
+        </g>
+        <line x1="40" y1="234" x2="300" y2="234" stroke="#161310"/>
+        <g class="mono-t" font-size="11" fill="#3a342c">
+          <text x="54" y="252">+ onCreate() : void</text>
+          <text x="54" y="268">+ onUpdate() : void</text>
+        </g>
+      </g>
+
+      <!-- ─── Group ─── -->
+      <g>
+        <rect x="380" y="60" width="280" height="240" fill="#fff" stroke="#161310" stroke-width="1.5"/>
+        <rect x="380" y="60" width="280" height="32" fill="#161310"/>
+        <text x="394" y="81" class="serif-t" font-size="16" fill="#fbf7ec">«entity»  Group</text>
+        <text x="600" y="81" class="mono-t" font-size="10" fill="#fbf7ec">app_groups</text>
+        <line x1="380" y1="92" x2="660" y2="92" stroke="#161310"/>
+        <g class="mono-t" font-size="11">
+          <text x="394" y="110">- id : UUID  «PK»</text>
+          <text x="394" y="126">- name : String</text>
+          <text x="394" y="142">- createdBy : UUID  → User</text>
+          <text x="394" y="158">- adminId : UUID  → User</text>
+          <text x="394" y="174">- members : List&lt;UUID&gt;</text>
+          <text x="394" y="190" fill="#6c6358">    @ElementCollection</text>
+          <text x="394" y="206" fill="#6c6358">    table = group_members</text>
+          <text x="394" y="222">- createdAt / updatedAt</text>
+        </g>
+      </g>
+
+      <!-- ─── Friendship ─── -->
+      <g>
+        <rect x="740" y="60" width="280" height="240" fill="#fff" stroke="#161310" stroke-width="1.5"/>
+        <rect x="740" y="60" width="280" height="32" fill="#161310"/>
+        <text x="754" y="81" class="serif-t" font-size="16" fill="#fbf7ec">«entity»  Friendship</text>
+        <text x="976" y="81" class="mono-t" font-size="10" fill="#fbf7ec">friendships</text>
+        <line x1="740" y1="92" x2="1020" y2="92" stroke="#161310"/>
+        <g class="mono-t" font-size="11">
+          <text x="754" y="110">- id : UUID  «PK»</text>
+          <text x="754" y="126">- sentBy : UUID  → User</text>
+          <text x="754" y="142">- sentTo : UUID  → User</text>
+          <text x="754" y="158">- status : Status</text>
+          <text x="754" y="174">- createdAt / updatedAt</text>
+        </g>
+        <line x1="740" y1="186" x2="1020" y2="186" stroke="#161310" stroke-dasharray="2 2"/>
+        <text x="754" y="204" class="mono-t" font-size="11" fill="#c2410c">«enum»  Status</text>
+        <g class="mono-t" font-size="11">
+          <text x="754" y="222">PENDING · ACCEPTED · BLOCKED</text>
+        </g>
+        <text x="754" y="248" class="mono-t" font-size="10" fill="#6c6358">unique(sentBy, sentTo)</text>
+      </g>
+
+      <!-- ─── Expense ─── -->
+      <g>
+        <rect x="40" y="370" width="320" height="290" fill="#fff" stroke="#c2410c" stroke-width="1.5"/>
+        <rect x="40" y="370" width="320" height="32" fill="#c2410c"/>
+        <text x="54" y="391" class="serif-t" font-size="16" fill="#fbf7ec">«entity»  Expense</text>
+        <text x="308" y="391" class="mono-t" font-size="10" fill="#fbf7ec">expenses</text>
+        <line x1="40" y1="402" x2="360" y2="402" stroke="#c2410c"/>
+        <g class="mono-t" font-size="11">
+          <text x="54" y="420">- id : UUID  «PK»</text>
+          <text x="54" y="436">- paidBy : UUID  → User</text>
+          <text x="54" y="452">- amount : BigDecimal(12,2)</text>
+          <text x="54" y="468">- splitType : SplitType</text>
+          <text x="54" y="484">- groupId : UUID?  → Group</text>
+          <text x="54" y="500">- title : String(200)</text>
+          <text x="54" y="516">- description : String(1000)</text>
+          <text x="54" y="532">- category : Category</text>
+          <text x="54" y="548">- shares : List&lt;SharedExpense&gt;</text>
+          <text x="54" y="564" fill="#6c6358">    @OneToMany cascade=ALL</text>
+          <text x="54" y="580">- createdAt : Instant</text>
+        </g>
+        <line x1="40" y1="592" x2="360" y2="592" stroke="#c2410c" stroke-dasharray="2 2"/>
+        <text x="54" y="610" class="mono-t" font-size="11" fill="#c2410c">«enum» SplitType</text>
+        <text x="54" y="624" class="mono-t" font-size="11">EQUAL · EXACT · PERCENTAGE · SHARES</text>
+        <text x="54" y="642" class="mono-t" font-size="11" fill="#c2410c">«enum» Category</text>
+        <text x="54" y="656" class="mono-t" font-size="11">FOOD · TRAVEL · SHOPPING · BILLS · OTHER</text>
+      </g>
+
+      <!-- ─── SharedExpense ─── -->
+      <g>
+        <rect x="420" y="370" width="240" height="160" fill="#fff" stroke="#c2410c" stroke-width="1.5"/>
+        <rect x="420" y="370" width="240" height="32" fill="#c2410c"/>
+        <text x="434" y="391" class="serif-t" font-size="16" fill="#fbf7ec">SharedExpense</text>
+        <text x="600" y="391" class="mono-t" font-size="10" fill="#fbf7ec">shared_expense</text>
+        <line x1="420" y1="402" x2="660" y2="402" stroke="#c2410c"/>
+        <g class="mono-t" font-size="11">
+          <text x="434" y="420">- id : UUID  «PK»</text>
+          <text x="434" y="436">- expense : Expense  «FK»</text>
+          <text x="434" y="452" fill="#6c6358">    @ManyToOne LAZY</text>
+          <text x="434" y="468">- userId : UUID  → User</text>
+          <text x="434" y="484">- amount : BigDecimal</text>
+        </g>
+        <line x1="420" y1="496" x2="660" y2="496" stroke="#c2410c" stroke-dasharray="2 2"/>
+        <text x="434" y="514" class="mono-t" font-size="10" fill="#6c6358">unique(expense_id, user_id)</text>
+      </g>
+
+      <!-- ─── PairBalance ─── -->
+      <g>
+        <rect x="720" y="370" width="280" height="200" fill="#fff" stroke="#1e3a8a" stroke-width="1.5"/>
+        <rect x="720" y="370" width="280" height="32" fill="#1e3a8a"/>
+        <text x="734" y="391" class="serif-t" font-size="16" fill="#fbf7ec">PairBalance</text>
+        <text x="976" y="391" class="mono-t" font-size="10" fill="#fbf7ec">pair_balances</text>
+        <line x1="720" y1="402" x2="1000" y2="402" stroke="#1e3a8a"/>
+        <g class="mono-t" font-size="11">
+          <text x="734" y="420">- id : UUID  «PK»</text>
+          <text x="734" y="436">- debtorId : UUID  → User</text>
+          <text x="734" y="452">- creditorId : UUID  → User</text>
+          <text x="734" y="468">- groupId : UUID?  → Group</text>
+          <text x="734" y="484">- amount : BigDecimal</text>
+          <text x="734" y="500">- version : Long  «@Version»</text>
+        </g>
+        <line x1="720" y1="512" x2="1000" y2="512" stroke="#1e3a8a" stroke-dasharray="2 2"/>
+        <text x="734" y="530" class="mono-t" font-size="10" fill="#6c6358">unique(debtor, creditor, group)</text>
+        <text x="734" y="546" class="mono-t" font-size="10" fill="#6c6358">optimistic locking on writes</text>
+      </g>
+
+      <!-- ─── Settlement ─── -->
+      <g>
+        <rect x="1040" y="370" width="280" height="200" fill="#fff" stroke="#1e3a8a" stroke-width="1.5"/>
+        <rect x="1040" y="370" width="280" height="32" fill="#1e3a8a"/>
+        <text x="1054" y="391" class="serif-t" font-size="16" fill="#fbf7ec">Settlement</text>
+        <text x="1280" y="391" class="mono-t" font-size="10" fill="#fbf7ec">settlements</text>
+        <line x1="1040" y1="402" x2="1320" y2="402" stroke="#1e3a8a"/>
+        <g class="mono-t" font-size="11">
+          <text x="1054" y="420">- id : UUID  «PK»</text>
+          <text x="1054" y="436">- payerId : UUID  → User</text>
+          <text x="1054" y="452">- receiverId : UUID  → User</text>
+          <text x="1054" y="468">- groupId : UUID?  → Group</text>
+          <text x="1054" y="484">- amount : BigDecimal</text>
+          <text x="1054" y="500">- scope : Scope</text>
+          <text x="1054" y="516">- createdAt : Instant</text>
+        </g>
+        <line x1="1040" y1="528" x2="1320" y2="528" stroke="#1e3a8a" stroke-dasharray="2 2"/>
+        <text x="1054" y="546" class="mono-t" font-size="11" fill="#1e3a8a">«enum» Scope · FRIEND · GROUP · FULL</text>
+      </g>
+
+      <!-- ─── Strategy interface block ─── -->
+      <g>
+        <rect x="40" y="730" width="540" height="240" fill="#fbf7ec" stroke="#c2410c" stroke-width="1.5"/>
+        <rect x="40" y="730" width="540" height="32" fill="#c2410c"/>
+        <text x="54" y="751" class="serif-t" font-size="16" fill="#fbf7ec">«interface»  SplitStrategy</text>
+        <line x1="40" y1="762" x2="580" y2="762" stroke="#c2410c"/>
+        <g class="mono-t" font-size="12">
+          <text x="54" y="784">+ type() : SplitType</text>
+          <text x="54" y="804">+ validate(total : BigDecimal, inputs : List&lt;SplitInput&gt;)</text>
+          <text x="54" y="824">+ split(total : BigDecimal, inputs : List&lt;SplitInput&gt;) : List&lt;ExpenseShare&gt;</text>
+        </g>
+        <line x1="40" y1="838" x2="580" y2="838" stroke="#c2410c" stroke-dasharray="2 2"/>
+        <text x="54" y="858" class="mono-t" font-size="11" fill="#6c6358">implementations</text>
+        <g class="mono-t" font-size="11.5">
+          <rect x="54" y="868" width="120" height="36" fill="#fff" stroke="#161310"/><text x="64" y="884">EqualSplit</text><text x="64" y="898" font-size="10" fill="#6c6358">EQUAL</text>
+          <rect x="184" y="868" width="120" height="36" fill="#fff" stroke="#161310"/><text x="194" y="884">ExactSplit</text><text x="194" y="898" font-size="10" fill="#6c6358">EXACT</text>
+          <rect x="314" y="868" width="120" height="36" fill="#fff" stroke="#161310"/><text x="324" y="884">PercentageSplit</text><text x="324" y="898" font-size="10" fill="#6c6358">PERCENTAGE</text>
+          <rect x="444" y="868" width="120" height="36" fill="#fff" stroke="#161310"/><text x="454" y="884">SharesSplit</text><text x="454" y="898" font-size="10" fill="#6c6358">SHARES</text>
+        </g>
+        <text x="54" y="932" class="mono-t" font-size="10" fill="#6c6358">— see fig 5.0 for behaviour comparison —</text>
+      </g>
+
+      <!-- ─── DTO / value-object cluster ─── -->
+      <g>
+        <rect x="620" y="730" width="700" height="240" fill="#fbf7ec" stroke="#161310" stroke-width="1.5"/>
+        <rect x="620" y="730" width="700" height="32" fill="#161310"/>
+        <text x="634" y="751" class="serif-t" font-size="16" fill="#fbf7ec">DTOs &amp; events  ·  package Dto</text>
+
+        <g class="mono-t" font-size="11">
+          <rect x="634" y="776" width="200" height="40" fill="#fff" stroke="#161310"/>
+          <text x="644" y="794" class="serif-t" font-size="13">ExpenseRequest</text>
+          <text x="644" y="808" fill="#6c6358">title, amount, splitType, …</text>
+
+          <rect x="844" y="776" width="200" height="40" fill="#fff" stroke="#161310"/>
+          <text x="854" y="794" class="serif-t" font-size="13">ExpenseResponse</text>
+          <text x="854" y="808" fill="#6c6358">+ List&lt;ExpenseShare&gt;</text>
+
+          <rect x="1054" y="776" width="200" height="40" fill="#fff" stroke="#161310"/>
+          <text x="1064" y="794" class="serif-t" font-size="13">SplitInput</text>
+          <text x="1064" y="808" fill="#6c6358">userId, value</text>
+
+          <rect x="634" y="826" width="200" height="40" fill="#fff" stroke="#161310"/>
+          <text x="644" y="844" class="serif-t" font-size="13">ExpenseShare</text>
+          <text x="644" y="858" fill="#6c6358">userId, amountOwed</text>
+
+          <rect x="844" y="826" width="200" height="40" fill="#fff" stroke="#161310"/>
+          <text x="854" y="844" class="serif-t" font-size="13">SettleRequest / Response</text>
+          <text x="854" y="858" fill="#6c6358">payer, receiver, amount, scope</text>
+
+          <rect x="1054" y="826" width="200" height="40" fill="#fff" stroke="#161310"/>
+          <text x="1064" y="844" class="serif-t" font-size="13">FriendBalance</text>
+          <text x="1064" y="858" fill="#6c6358">friendId, amount, direction</text>
+
+          <rect x="634" y="876" width="200" height="40" fill="#fff" stroke="#1e3a8a"/>
+          <text x="644" y="894" class="serif-t" font-size="13" fill="#1e3a8a">ExpenseCreatedEvent</text>
+          <text x="644" y="908" fill="#6c6358">domain event record</text>
+
+          <rect x="844" y="876" width="200" height="40" fill="#fff" stroke="#1e3a8a"/>
+          <text x="854" y="894" class="serif-t" font-size="13" fill="#1e3a8a">SettlementCreatedEvent</text>
+          <text x="854" y="908" fill="#6c6358">domain event record</text>
+
+          <rect x="1054" y="876" width="200" height="40" fill="#fff" stroke="#161310"/>
+          <text x="1064" y="894" class="serif-t" font-size="13">BalanceSummary</text>
+          <text x="1064" y="908" fill="#6c6358">youOwe, owedToYou, net</text>
+        </g>
+        <text x="634" y="940" class="mono-t" font-size="10" fill="#6c6358">all immutable Java records · serialized to JSON by Jackson</text>
+      </g>
+
+      <!-- ─── relationships ─── -->
+      <!-- User --(member of, *..*)-- Group : composition diamond on User side -->
+      <line x1="300" y1="172" x2="380" y2="172" stroke="#161310" stroke-width="1.2" marker-start="url(#diam)"/>
+      <text x="312" y="166" class="mono-t" font-size="10" fill="#6c6358">members</text>
+      <text x="335" y="186" class="mono-t" font-size="10" fill="#6c6358">0..*    0..*</text>
+
+      <!-- User -- Friendship  (sentBy / sentTo) -->
+      <line x1="300" y1="118" x2="740" y2="118" stroke="#161310" stroke-width="1.2" marker-end="url(#arrLine)"/>
+      <text x="500" y="112" class="mono-t" font-size="10" fill="#6c6358">sentBy / sentTo  →  User</text>
+
+      <!-- Expense -> User (paidBy) -->
+      <line x1="120" y1="370" x2="120" y2="300" stroke="#161310" stroke-width="1.2" marker-end="url(#arrLine)"/>
+      <text x="128" y="338" class="mono-t" font-size="10" fill="#6c6358">paidBy → User</text>
+
+      <!-- Expense -> Group (groupId) -->
+      <line x1="280" y1="370" x2="500" y2="300" stroke="#161310" stroke-width="1.2" stroke-dasharray="4 3" marker-end="url(#arrLine)"/>
+      <text x="380" y="332" class="mono-t" font-size="10" fill="#6c6358">groupId  (nullable)</text>
+
+      <!-- Expense composes SharedExpense (1..*) -->
+      <line x1="360" y1="478" x2="420" y2="478" stroke="#c2410c" stroke-width="1.5" marker-start="url(#diamFilled)"/>
+      <text x="365" y="472" class="mono-t" font-size="10" fill="#c2410c">1</text>
+      <text x="395" y="472" class="mono-t" font-size="10" fill="#c2410c">*</text>
+
+      <!-- Expense -> SplitStrategy (uses) -->
+      <line x1="200" y1="660" x2="200" y2="730" stroke="#c2410c" stroke-width="1.2" stroke-dasharray="3 3" marker-end="url(#arrLine)"/>
+      <text x="208" y="700" class="mono-t" font-size="10" fill="#c2410c">«uses» splitType</text>
+
+      <!-- PairBalance -> User x2 -->
+      <line x1="850" y1="370" x2="600" y2="300" stroke="#1e3a8a" stroke-width="1.2" marker-end="url(#arrLine)"/>
+      <text x="690" y="334" class="mono-t" font-size="10" fill="#1e3a8a">debtor / creditor → User</text>
+
+      <!-- Settlement -> User x2 -->
+      <line x1="1180" y1="370" x2="900" y2="300" stroke="#1e3a8a" stroke-width="1.2" marker-end="url(#arrLine)"/>
+      <text x="1010" y="328" class="mono-t" font-size="10" fill="#1e3a8a">payer / receiver → User</text>
+
+      <!-- Settlement -> PairBalance (writes through) -->
+      <line x1="1040" y1="470" x2="1000" y2="470" stroke="#1e3a8a" stroke-width="1.2" stroke-dasharray="3 3" marker-end="url(#arrLine)"/>
+      <text x="1004" y="464" class="mono-t" font-size="10" fill="#1e3a8a">audits</text>
+
+    </svg>
+
+    <div class="legend">
+      <div class="key"><span class="sw" style="background:#161310"></span>Core entity</div>
+      <div class="key"><span class="sw" style="background:#c2410c"></span>Expense aggregate</div>
+      <div class="key"><span class="sw" style="background:#1e3a8a"></span>Balance / settlement aggregate</div>
+      <div class="key"><span class="sw" style="background:#fff;border:1.5px solid #161310"></span>Class</div>
+      <div class="key"><span class="sw" style="background:#fbf7ec;border:1.5px solid #161310"></span>Bounded module</div>
+      <div class="key"><span style="font-family:JetBrains Mono;font-size:13px;line-height:1">◇━</span> aggregation</div>
+      <div class="key"><span style="font-family:JetBrains Mono;font-size:13px;line-height:1">◆━</span> composition</div>
+      <div class="key"><span style="font-family:JetBrains Mono;font-size:13px;line-height:1">─→</span> association</div>
+      <div class="key"><span style="font-family:JetBrains Mono;font-size:13px;line-height:1">┄→</span> uses / soft ref</div>
+    </div>
+  </div>
+
+  <div class="cap">
+    <span>FIG 2.0 — UML 2.x class diagram · 7 entities + 4 enums + 11 DTOs</span>
+    <span>Source: Entities/* · Dto/* · Services/Split/*</span>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════ 03 · ER ═══════════════════════ -->
+<section id="er">
+  <div class="sect-head">
+    <span class="num">03</span>
+    <h2 class="serif">Data <em>model</em> (ER)</h2>
+    <span class="desc">Physical schema — tables, keys, and constraints as deployed by Hibernate's <span class="pill">ddl-auto: update</span></span>
+  </div>
+  <div class="sect-rule"></div>
+
+  <div class="diagram-frame">
+    <svg viewBox="0 0 1360 620" width="100%" style="display:block">
+      <defs>
+        <marker id="erArr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10" fill="none" stroke="#161310" stroke-width="1.2"/>
+        </marker>
+      </defs>
+      <text x="20" y="24" class="mono-t" font-size="11" letter-spacing="2" fill="#6c6358">FIG 3.0  ·  ENTITY-RELATIONSHIP DIAGRAM  ·  9 PHYSICAL TABLES</text>
+
+      <!-- users -->
+      <g>
+        <rect x="40" y="60" width="240" height="180" fill="#fff" stroke="#161310" stroke-width="1.5"/>
+        <rect x="40" y="60" width="240" height="26" fill="#161310"/>
+        <text x="54" y="78" class="mono-t" font-size="12" font-weight="700" fill="#fbf7ec">users</text>
+        <g class="mono-t" font-size="11">
+          <text x="54" y="106"><tspan fill="#c2410c">PK</tspan>  id : uuid</text>
+          <text x="54" y="124">name : varchar</text>
+          <text x="54" y="142"><tspan fill="#1e3a8a">UQ</tspan>  email : varchar</text>
+          <text x="54" y="160">password : varchar</text>
+          <text x="54" y="178">role : varchar</text>
+          <text x="54" y="196">created_at · updated_at</text>
+        </g>
+      </g>
+
+      <!-- users_group (join) -->
+      <g>
+        <rect x="320" y="60" width="200" height="120" fill="#f5f1e8" stroke="#161310" stroke-width="1.2" stroke-dasharray="3 3"/>
+        <rect x="320" y="60" width="200" height="26" fill="#3a342c"/>
+        <text x="334" y="78" class="mono-t" font-size="12" font-weight="700" fill="#fbf7ec">users_group</text>
+        <g class="mono-t" font-size="11">
+          <text x="334" y="106"><tspan fill="#c2410c">FK</tspan>  user_id</text>
+          <text x="334" y="124"><tspan fill="#c2410c">FK</tspan>  group_id</text>
+          <text x="334" y="148" fill="#6c6358">@ElementCollection on User</text>
+        </g>
+      </g>
+
+      <!-- app_groups -->
+      <g>
+        <rect x="560" y="60" width="240" height="180" fill="#fff" stroke="#161310" stroke-width="1.5"/>
+        <rect x="560" y="60" width="240" height="26" fill="#161310"/>
+        <text x="574" y="78" class="mono-t" font-size="12" font-weight="700" fill="#fbf7ec">app_groups</text>
+        <g class="mono-t" font-size="11">
+          <text x="574" y="106"><tspan fill="#c2410c">PK</tspan>  id : uuid</text>
+          <text x="574" y="124">name : varchar</text>
+          <text x="574" y="142"><tspan fill="#c2410c">FK</tspan>  created_by</text>
+          <text x="574" y="160"><tspan fill="#c2410c">FK</tspan>  admin_id</text>
+          <text x="574" y="178">created_at · updated_at</text>
+        </g>
+      </g>
+
+      <!-- group_members -->
+      <g>
+        <rect x="840" y="60" width="200" height="120" fill="#f5f1e8" stroke="#161310" stroke-width="1.2" stroke-dasharray="3 3"/>
+        <rect x="840" y="60" width="200" height="26" fill="#3a342c"/>
+        <text x="854" y="78" class="mono-t" font-size="12" font-weight="700" fill="#fbf7ec">group_members</text>
+        <g class="mono-t" font-size="11">
+          <text x="854" y="106"><tspan fill="#c2410c">FK</tspan>  group_id</text>
+          <text x="854" y="124">member_id : uuid</text>
+        </g>
+      </g>
+
+      <!-- friendships -->
+      <g>
+        <rect x="1080" y="60" width="240" height="180" fill="#fff" stroke="#161310" stroke-width="1.5"/>
+        <rect x="1080" y="60" width="240" height="26" fill="#161310"/>
+        <text x="1094" y="78" class="mono-t" font-size="12" font-weight="700" fill="#fbf7ec">friendships</text>
+        <g class="mono-t" font-size="11">
+          <text x="1094" y="106"><tspan fill="#c2410c">PK</tspan>  id : uuid</text>
+          <text x="1094" y="124"><tspan fill="#1e3a8a">UQ</tspan>  request_sent_by</text>
+          <text x="1094" y="142"><tspan fill="#1e3a8a">UQ</tspan>  request_sent_to</text>
+          <text x="1094" y="160">status : varchar(20)</text>
+          <text x="1094" y="178">created_at · updated_at</text>
+        </g>
+      </g>
+
+      <!-- expenses -->
+      <g>
+        <rect x="40" y="320" width="280" height="200" fill="#fff" stroke="#c2410c" stroke-width="1.5"/>
+        <rect x="40" y="320" width="280" height="26" fill="#c2410c"/>
+        <text x="54" y="338" class="mono-t" font-size="12" font-weight="700" fill="#fbf7ec">expenses</text>
+        <g class="mono-t" font-size="11">
+          <text x="54" y="366"><tspan fill="#c2410c">PK</tspan>  id : uuid</text>
+          <text x="54" y="384"><tspan fill="#c2410c">FK</tspan>  paid_by → users</text>
+          <text x="54" y="402">amount : numeric(12,2)</text>
+          <text x="54" y="420">split_type : varchar(20)</text>
+          <text x="54" y="438"><tspan fill="#c2410c">FK</tspan>  group_id → app_groups</text>
+          <text x="54" y="456">title : varchar(200)</text>
+          <text x="54" y="474">description : varchar(1000)</text>
+          <text x="54" y="492">category : varchar(20)</text>
+          <text x="54" y="510">created_at : timestamptz</text>
+        </g>
+      </g>
+
+      <!-- shared_expense -->
+      <g>
+        <rect x="380" y="320" width="240" height="200" fill="#fff" stroke="#c2410c" stroke-width="1.5"/>
+        <rect x="380" y="320" width="240" height="26" fill="#c2410c"/>
+        <text x="394" y="338" class="mono-t" font-size="12" font-weight="700" fill="#fbf7ec">shared_expense</text>
+        <g class="mono-t" font-size="11">
+          <text x="394" y="366"><tspan fill="#c2410c">PK</tspan>  id : uuid</text>
+          <text x="394" y="384"><tspan fill="#c2410c">FK</tspan>  expense_id</text>
+          <text x="394" y="402"><tspan fill="#c2410c">FK</tspan>  user_id → users</text>
+          <text x="394" y="420">amount : numeric</text>
+          <text x="394" y="448" fill="#6c6358">UQ(expense_id, user_id)</text>
+        </g>
+      </g>
+
+      <!-- pair_balances -->
+      <g>
+        <rect x="680" y="320" width="280" height="200" fill="#fff" stroke="#1e3a8a" stroke-width="1.5"/>
+        <rect x="680" y="320" width="280" height="26" fill="#1e3a8a"/>
+        <text x="694" y="338" class="mono-t" font-size="12" font-weight="700" fill="#fbf7ec">pair_balances</text>
+        <g class="mono-t" font-size="11">
+          <text x="694" y="366"><tspan fill="#c2410c">PK</tspan>  id : uuid</text>
+          <text x="694" y="384"><tspan fill="#c2410c">FK</tspan>  debtor_id → users</text>
+          <text x="694" y="402"><tspan fill="#c2410c">FK</tspan>  creditor_id → users</text>
+          <text x="694" y="420"><tspan fill="#c2410c">FK</tspan>  group_id → app_groups</text>
+          <text x="694" y="438">amount : numeric(12,2)</text>
+          <text x="694" y="456">version : bigint  «opt-lock»</text>
+          <text x="694" y="488" fill="#6c6358">UQ(debtor_id, creditor_id, group_id)</text>
+        </g>
+      </g>
+
+      <!-- settlements -->
+      <g>
+        <rect x="1020" y="320" width="300" height="200" fill="#fff" stroke="#1e3a8a" stroke-width="1.5"/>
+        <rect x="1020" y="320" width="300" height="26" fill="#1e3a8a"/>
+        <text x="1034" y="338" class="mono-t" font-size="12" font-weight="700" fill="#fbf7ec">settlements</text>
+        <g class="mono-t" font-size="11">
+          <text x="1034" y="366"><tspan fill="#c2410c">PK</tspan>  id : uuid</text>
+          <text x="1034" y="384"><tspan fill="#c2410c">FK</tspan>  payer_id → users</text>
+          <text x="1034" y="402"><tspan fill="#c2410c">FK</tspan>  receiver_id → users</text>
+          <text x="1034" y="420"><tspan fill="#c2410c">FK</tspan>  group_id → app_groups</text>
+          <text x="1034" y="438">amount : numeric(12,2)</text>
+          <text x="1034" y="456">scope : varchar(20)</text>
+          <text x="1034" y="474">created_at : timestamptz</text>
+        </g>
+      </g>
+
+      <!-- relations -->
+      <g stroke="#161310" stroke-width="1.2" fill="none">
+        <line x1="280" y1="120" x2="320" y2="120" marker-end="url(#erArr)"/>
+        <line x1="520" y1="120" x2="560" y2="120" marker-end="url(#erArr)"/>
+        <line x1="800" y1="120" x2="840" y2="120" marker-end="url(#erArr)"/>
+        <line x1="1040" y1="120" x2="1080" y2="120" marker-end="url(#erArr)"/>
+        <!-- expenses -> users -->
+        <path d="M120,320 C120,260 160,260 160,240" marker-end="url(#erArr)"/>
+        <!-- expenses -> shared_expense -->
+        <line x1="320" y1="420" x2="380" y2="420" marker-end="url(#erArr)"/>
+        <!-- expenses -> app_groups -->
+        <path d="M280,360 C400,300 520,260 600,240" stroke-dasharray="3 3" marker-end="url(#erArr)"/>
+        <!-- pair_balances -> users -->
+        <path d="M820,320 C820,260 280,260 200,240" stroke-dasharray="3 3" marker-end="url(#erArr)"/>
+        <!-- pair_balances -> groups -->
+        <path d="M820,320 C820,260 700,240 680,240" stroke-dasharray="3 3" marker-end="url(#erArr)"/>
+        <!-- settlements -> users -->
+        <path d="M1160,320 C1160,260 280,260 200,240" stroke-dasharray="3 3" marker-end="url(#erArr)"/>
+      </g>
+
+      <text x="20" y="580" class="mono-t" font-size="11" fill="#6c6358">Tables: users · users_group · app_groups · group_members · friendships · expenses · shared_expense · pair_balances · settlements</text>
+      <text x="20" y="598" class="mono-t" font-size="11" fill="#6c6358">All primary keys are application-generated UUIDs. PostgreSQL native uuid type.</text>
+    </svg>
+    <div class="legend">
+      <div class="key"><span class="sw" style="background:#fff;border:1.5px solid #161310"></span>Aggregate-root table</div>
+      <div class="key"><span class="sw" style="background:#f5f1e8;border:1.5px dashed #161310"></span>Join / element-collection table</div>
+      <div class="key"><span class="sw" style="border-color:#c2410c"></span>Expense aggregate</div>
+      <div class="key"><span class="sw" style="border-color:#1e3a8a"></span>Balance &amp; settlement aggregate</div>
+      <div class="key"><span class="mono" style="color:#c2410c">PK</span> primary key</div>
+      <div class="key"><span class="mono" style="color:#c2410c">FK</span> foreign-key reference</div>
+      <div class="key"><span class="mono" style="color:#1e3a8a">UQ</span> unique constraint</div>
+    </div>
+  </div>
+
+  <div class="cap">
+    <span>FIG 3.0 — Hibernate-generated relational schema</span>
+    <span>Source: @Entity / @Table annotations</span>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════ 04 · SEQUENCE ═══════════════════════ -->
+<section id="flow">
+  <div class="sect-head">
+    <span class="num">04</span>
+    <h2 class="serif">Sequence — <em>create expense</em></h2>
+    <span class="desc">The signature flow. Splits an amount, persists shares, updates pair-balances inside one transaction, then publishes an event for asynchronous email notification.</span>
+  </div>
+  <div class="sect-rule"></div>
+
+  <div class="diagram-frame">
+    <svg viewBox="0 0 1360 880" width="100%" style="display:block">
+      <defs>
+        <marker id="seqArr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10" fill="#161310"/>
+        </marker>
+        <marker id="seqArrA" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10" fill="#1e3a8a"/>
+        </marker>
+        <marker id="seqArrOpen" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="10" markerHeight="10" orient="auto-start-reverse">
+          <path d="M0,0 L10,5 L0,10" fill="none" stroke="#161310" stroke-width="1.2"/>
+        </marker>
+      </defs>
+
+      <text x="20" y="24" class="mono-t" font-size="11" letter-spacing="2" fill="#6c6358">FIG 4.0  ·  POST /api/expenses  →  ExpenseService.createExpense()</text>
+
+      <!-- lifelines (8 actors) -->
+      <g font-family="JetBrains Mono" font-size="11">
+        <!-- Client -->
+        <rect x="40" y="60" width="120" height="40" fill="#fff" stroke="#161310" stroke-width="1.5"/>
+        <text x="100" y="86" text-anchor="middle" class="serif-t" font-size="14">Client</text>
+        <line x1="100" y1="100" x2="100" y2="800" stroke="#161310" stroke-dasharray="3 3"/>
+        <!-- JwtAuthFilter -->
+        <rect x="180" y="60" width="140" height="40" fill="#fff" stroke="#c2410c" stroke-width="1.5"/>
+        <text x="250" y="86" text-anchor="middle" class="serif-t" font-size="14" fill="#c2410c">JwtAuthFilter</text>
+        <line x1="250" y1="100" x2="250" y2="800" stroke="#c2410c" stroke-dasharray="3 3"/>
+        <!-- Controller -->
+        <rect x="340" y="60" width="160" height="40" fill="#fff" stroke="#161310" stroke-width="1.5"/>
+        <text x="420" y="86" text-anchor="middle" class="serif-t" font-size="14">ExpenseController</text>
+        <line x1="420" y1="100" x2="420" y2="800" stroke="#161310" stroke-dasharray="3 3"/>
+        <!-- Service -->
+        <rect x="520" y="60" width="160" height="40" fill="#fff" stroke="#161310" stroke-width="1.5"/>
+        <text x="600" y="86" text-anchor="middle" class="serif-t" font-size="14">ExpenseService</text>
+        <line x1="600" y1="100" x2="600" y2="800" stroke="#161310" stroke-dasharray="3 3"/>
+        <!-- Strategy -->
+        <rect x="700" y="60" width="160" height="40" fill="#fff" stroke="#c2410c" stroke-width="1.5"/>
+        <text x="780" y="86" text-anchor="middle" class="serif-t" font-size="14" fill="#c2410c">SplitStrategy</text>
+        <line x1="780" y1="100" x2="780" y2="800" stroke="#c2410c" stroke-dasharray="3 3"/>
+        <!-- Repos / DB -->
+        <rect x="880" y="60" width="160" height="40" fill="#fff" stroke="#161310" stroke-width="1.5"/>
+        <text x="960" y="86" text-anchor="middle" class="serif-t" font-size="14">JPA · DB</text>
+        <line x1="960" y1="100" x2="960" y2="800" stroke="#161310" stroke-dasharray="3 3"/>
+        <!-- BalanceService -->
+        <rect x="1060" y="60" width="140" height="40" fill="#fff" stroke="#1e3a8a" stroke-width="1.5"/>
+        <text x="1130" y="86" text-anchor="middle" class="serif-t" font-size="14" fill="#1e3a8a">BalanceService</text>
+        <line x1="1130" y1="100" x2="1130" y2="800" stroke="#1e3a8a" stroke-dasharray="3 3"/>
+        <!-- Listener -->
+        <rect x="1220" y="60" width="120" height="40" fill="#fff" stroke="#1e3a8a" stroke-width="1.5"/>
+        <text x="1280" y="86" text-anchor="middle" class="serif-t" font-size="14" fill="#1e3a8a">MailListener</text>
+        <line x1="1280" y1="100" x2="1280" y2="800" stroke="#1e3a8a" stroke-dasharray="3 3"/>
+      </g>
+
+      <!-- 1 client -> filter -->
+      <g font-family="JetBrains Mono" font-size="11" fill="#161310">
+        <line x1="100" y1="140" x2="250" y2="140" stroke="#161310" stroke-width="1.2" marker-end="url(#seqArr)"/>
+        <text x="108" y="134">1 · POST /api/expenses  · Bearer JWT</text>
+
+        <!-- 2 filter validates -->
+        <rect x="244" y="160" width="12" height="36" fill="#fbf7ec" stroke="#c2410c"/>
+        <text x="262" y="178" fill="#c2410c">2 · validate token via JwtService</text>
+        <text x="262" y="192" fill="#6c6358">     set SecurityContext = UserDetails</text>
+
+        <!-- 3 filter -> controller -->
+        <line x1="250" y1="220" x2="420" y2="220" stroke="#161310" stroke-width="1.2" marker-end="url(#seqArr)"/>
+        <text x="258" y="214">3 · forward request</text>
+
+        <!-- 4 controller -> service -->
+        <line x1="420" y1="260" x2="600" y2="260" stroke="#161310" stroke-width="1.2" marker-end="url(#seqArr)"/>
+        <text x="430" y="254">4 · createExpense(userDetails, request)</text>
+
+        <!-- @Transactional band -->
+        <rect x="528" y="280" width="690" height="380" fill="none" stroke="#1e3a8a" stroke-width="1.2" stroke-dasharray="6 4"/>
+        <text x="540" y="296" class="serif-t" font-size="13" fill="#1e3a8a" font-style="italic">@Transactional — atomic boundary</text>
+
+        <!-- 5 service -> registry -->
+        <line x1="600" y1="320" x2="780" y2="320" stroke="#c2410c" stroke-width="1.2" marker-end="url(#seqArr)"/>
+        <text x="610" y="314" fill="#c2410c">5 · registry.get(splitType)</text>
+        <line x1="780" y1="346" x2="600" y2="346" stroke="#c2410c" stroke-width="1.2" stroke-dasharray="3 3" marker-end="url(#seqArrOpen)"/>
+        <text x="610" y="340" fill="#c2410c">6 · SplitStrategy impl</text>
+
+        <!-- 7 service -> strategy validate/split -->
+        <line x1="600" y1="376" x2="780" y2="376" stroke="#c2410c" stroke-width="1.2" marker-end="url(#seqArr)"/>
+        <text x="610" y="370" fill="#c2410c">7 · validate(amount, inputs)</text>
+        <line x1="600" y1="400" x2="780" y2="400" stroke="#c2410c" stroke-width="1.2" marker-end="url(#seqArr)"/>
+        <text x="610" y="394" fill="#c2410c">8 · split(amount, inputs) → List&lt;ExpenseShare&gt;</text>
+
+        <!-- 9 service -> db save expense -->
+        <line x1="600" y1="436" x2="960" y2="436" stroke="#161310" stroke-width="1.2" marker-end="url(#seqArr)"/>
+        <text x="610" y="430">9 · expenseRepository.save(expense)</text>
+        <line x1="960" y1="458" x2="600" y2="458" stroke="#161310" stroke-width="1.2" stroke-dasharray="3 3" marker-end="url(#seqArrOpen)"/>
+        <text x="700" y="452" fill="#6c6358">    Expense (id assigned)</text>
+
+        <!-- 10 service -> db saveAll shares -->
+        <line x1="600" y1="488" x2="960" y2="488" stroke="#161310" stroke-width="1.2" marker-end="url(#seqArr)"/>
+        <text x="610" y="482">10 · saveAll(SharedExpense[])</text>
+
+        <!-- 11 loop -> balanceservice.applyDebt -->
+        <rect x="594" y="510" width="544" height="60" fill="none" stroke="#1e3a8a" stroke-width="1" stroke-dasharray="2 3"/>
+        <text x="606" y="528" fill="#1e3a8a" font-style="italic">loop · for each share where userId ≠ payer</text>
+        <line x1="600" y1="550" x2="1130" y2="550" stroke="#1e3a8a" stroke-width="1.2" marker-end="url(#seqArrA)"/>
+        <text x="616" y="544" fill="#1e3a8a">11 · applyDebt(debtor, creditor, amount, groupId?)</text>
+
+        <!-- 12 balance -> db -->
+        <line x1="1130" y1="600" x2="960" y2="600" stroke="#1e3a8a" stroke-width="1.2" marker-end="url(#seqArrA)"/>
+        <text x="970" y="594" fill="#1e3a8a">12 · upsert / merge PairBalance (with @Version)</text>
+
+        <!-- 13 service publishEvent -->
+        <line x1="600" y1="640" x2="1280" y2="640" stroke="#1e3a8a" stroke-width="1.2" marker-end="url(#seqArrA)"/>
+        <text x="610" y="634" fill="#1e3a8a">13 · publishEvent(ExpenseCreatedEvent)  «non-blocking»</text>
+
+        <!-- transaction commits -->
+        <text x="540" y="678" class="serif-t" font-size="13" font-style="italic" fill="#1e3a8a">— commit —</text>
+
+        <!-- 14 controller -> client (response) -->
+        <line x1="600" y1="700" x2="420" y2="700" stroke="#161310" stroke-width="1.2" stroke-dasharray="3 3" marker-end="url(#seqArrOpen)"/>
+        <text x="430" y="694" fill="#6c6358">14 · ExpenseResponse</text>
+        <line x1="420" y1="724" x2="100" y2="724" stroke="#161310" stroke-width="1.2" stroke-dasharray="3 3" marker-end="url(#seqArrOpen)"/>
+        <text x="108" y="718" fill="#6c6358">15 · 200 OK + JSON body</text>
+
+        <!-- async lane -->
+        <rect x="1218" y="744" width="124" height="40" fill="#fbf7ec" stroke="#1e3a8a"/>
+        <text x="1280" y="760" text-anchor="middle" fill="#1e3a8a" class="serif-t" font-size="12">@Async dispatch</text>
+        <text x="1280" y="776" text-anchor="middle" fill="#6c6358" font-size="10">→ MailService.sendExpense…()</text>
+      </g>
+
+      <!-- error path note -->
+      <g>
+        <rect x="40" y="744" width="540" height="56" fill="#fbf7ec" stroke="#161310" stroke-width="1.2"/>
+        <text x="56" y="763" class="serif-t" font-size="14" font-style="italic">Error path</text>
+        <text x="56" y="780" class="mono-t" font-size="11" fill="#6c6358">throw → tx rolls back → GlobalExceptionHandler maps</text>
+        <text x="56" y="794" class="mono-t" font-size="11" fill="#6c6358">to 4xx JSON  ·  no event published, no debt mutated.</text>
+      </g>
+    </svg>
+
+    <div class="legend">
+      <div class="key"><span class="sw" style="border-color:#c2410c"></span>Strategy / split logic</div>
+      <div class="key"><span class="sw" style="border-color:#1e3a8a"></span>Balance + async event path</div>
+      <div class="key"><span style="font-family:JetBrains Mono">━━▶</span> synchronous call</div>
+      <div class="key"><span style="font-family:JetBrains Mono">┄┄▷</span> return value</div>
+      <div class="key"><span class="sw" style="background:none;border:1.2px dashed #1e3a8a"></span>transactional / loop block</div>
+    </div>
+  </div>
+
+  <div class="cap">
+    <span>FIG 4.0 — UML 2 sequence diagram · happy-path</span>
+    <span>Source: ExpenseService.java · BalanceService.java · JwtAuthFilter.java</span>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════ 05 · STRATEGY ═══════════════════════ -->
+<section id="strategy">
+  <div class="sect-head">
+    <span class="num">05</span>
+    <h2 class="serif">Split <em>strategies</em></h2>
+    <span class="desc">Four interchangeable algorithms behind one interface. New split modes drop in as a Spring bean — the registry auto-discovers them.</span>
+  </div>
+  <div class="sect-rule"></div>
+
+  <div class="diagram-frame" style="display:grid; grid-template-columns: 1.1fr 1fr; gap: 28px;">
+    <div>
+      <h3 class="serif" style="margin:0 0 10px; font-size:22px;">Behaviour at a glance</h3>
+      <p class="annot" style="margin:0 0 14px;">Given a total of <span class="mono pill">₹1200</span> and 3 participants, each strategy distributes the burden differently. The <b>payer's share</b> is implied — they are charged the balance after <code class="mono">SharedExpense</code> rows are written.</p>
+
+      <table style="width:100%; border-collapse:collapse; font-family:'JetBrains Mono', monospace; font-size:12px;">
+        <thead>
+          <tr style="background:#161310; color:#fbf7ec;">
+            <th style="text-align:left;padding:8px 10px;">SplitType</th>
+            <th style="text-align:left;padding:8px 10px;">Input shape</th>
+            <th style="text-align:left;padding:8px 10px;">Result for ₹1200 / 3</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="border-bottom:1px solid #161310;">
+            <td style="padding:8px 10px;"><b>EQUAL</b></td>
+            <td style="padding:8px 10px;color:#6c6358;">just userIds</td>
+            <td style="padding:8px 10px;">400 · 400 · 400</td>
+          </tr>
+          <tr style="background:#fbf7ec; border-bottom:1px solid #161310;">
+            <td style="padding:8px 10px;"><b>EXACT</b></td>
+            <td style="padding:8px 10px;color:#6c6358;">amount each</td>
+            <td style="padding:8px 10px;">500 · 400 · 300</td>
+          </tr>
+          <tr style="border-bottom:1px solid #161310;">
+            <td style="padding:8px 10px;"><b>PERCENTAGE</b></td>
+            <td style="padding:8px 10px;color:#6c6358;">% each (Σ = 100)</td>
+            <td style="padding:8px 10px;">50% → 600 · 30% → 360 · 20% → 240</td>
+          </tr>
+          <tr style="background:#fbf7ec;">
+            <td style="padding:8px 10px;"><b>SHARES</b></td>
+            <td style="padding:8px 10px;color:#6c6358;">share weight</td>
+            <td style="padding:8px 10px;">2 : 1 : 1 → 600 · 300 · 300</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div style="margin-top:18px; padding:14px; border:1.5px solid #161310; background:#fbf7ec;">
+        <div class="mono" style="font-size:10px; letter-spacing:.14em; color:#6c6358;">EXTENSION POINT</div>
+        <div class="serif" style="font-size:18px; margin-top:4px;">Adding a 5th strategy</div>
+        <ol class="mono" style="font-size:12px; padding-left:18px; margin: 8px 0 0; color:#3a342c;">
+          <li>Add <code>ITEMIZED</code> (or whatever) to <code>Expense.SplitType</code>.</li>
+          <li>Implement <code>SplitStrategy</code> with <code>@Component</code>.</li>
+          <li>Done. The <code>SplitStrategyRegistry</code> picks it up by <code>type()</code> at startup.</li>
+        </ol>
+      </div>
+    </div>
+
+    <div>
+      <svg viewBox="0 0 600 540" width="100%" style="display:block">
+        <defs>
+          <marker id="impArr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="11" markerHeight="11" orient="auto-start-reverse">
+            <path d="M0,0 L10,5 L0,10 z" fill="none" stroke="#c2410c" stroke-width="1.4"/>
+          </marker>
+        </defs>
+        <text x="14" y="20" class="mono-t" font-size="11" letter-spacing="2" fill="#6c6358">FIG 5.0  ·  STRATEGY HIERARCHY</text>
+
+        <!-- registry -->
+        <rect x="120" y="50" width="360" height="64" fill="#fff" stroke="#161310" stroke-width="1.5"/>
+        <text x="300" y="74" text-anchor="middle" class="serif-t" font-size="16">SplitStrategyRegistry</text>
+        <text x="300" y="92" text-anchor="middle" class="mono-t" font-size="10" fill="#6c6358">Map&lt;SplitType, SplitStrategy&gt;</text>
+        <text x="300" y="106" text-anchor="middle" class="mono-t" font-size="10" fill="#6c6358">+ get(type) : SplitStrategy</text>
+
+        <!-- arrow down -->
+        <line x1="300" y1="114" x2="300" y2="150" stroke="#c2410c" stroke-width="1.4" marker-end="url(#impArr)"/>
+        <text x="310" y="140" class="mono-t" font-size="10" fill="#c2410c">«uses»</text>
+
+        <!-- interface -->
+        <rect x="120" y="150" width="360" height="80" fill="#fbf7ec" stroke="#c2410c" stroke-width="1.5"/>
+        <text x="300" y="170" text-anchor="middle" class="mono-t" font-size="12" fill="#c2410c">«interface»</text>
+        <text x="300" y="190" text-anchor="middle" class="serif-t" font-size="18" fill="#c2410c">SplitStrategy</text>
+        <text x="300" y="210" text-anchor="middle" class="mono-t" font-size="10" fill="#6c6358">type()  ·  validate()  ·  split()</text>
+
+        <!-- inheritance lines -->
+        <line x1="300" y1="230" x2="300" y2="270" stroke="#c2410c" stroke-width="1.2"/>
+        <line x1="80" y1="270" x2="520" y2="270" stroke="#c2410c" stroke-width="1.2"/>
+        <line x1="80" y1="270" x2="80" y2="300" stroke="#c2410c" stroke-width="1.2"/>
+        <line x1="220" y1="270" x2="220" y2="300" stroke="#c2410c" stroke-width="1.2"/>
+        <line x1="380" y1="270" x2="380" y2="300" stroke="#c2410c" stroke-width="1.2"/>
+        <line x1="520" y1="270" x2="520" y2="300" stroke="#c2410c" stroke-width="1.2"/>
+        <!-- empty triangles at bottom of interface -->
+        <polygon points="295,228 305,228 300,238" fill="#fff" stroke="#c2410c" stroke-width="1.2"/>
+
+        <!-- 4 implementations -->
+        <g>
+          <rect x="20" y="300" width="120" height="80" fill="#fff" stroke="#161310" stroke-width="1.5"/>
+          <text x="80" y="320" text-anchor="middle" class="serif-t" font-size="14">EqualSplit</text>
+          <text x="80" y="338" text-anchor="middle" class="mono-t" font-size="9" fill="#6c6358">EQUAL</text>
+          <text x="80" y="356" text-anchor="middle" class="mono-t" font-size="9">amount / n</text>
+          <text x="80" y="370" text-anchor="middle" class="mono-t" font-size="9" fill="#6c6358">remainder → first</text>
+
+          <rect x="160" y="300" width="120" height="80" fill="#fff" stroke="#161310" stroke-width="1.5"/>
+          <text x="220" y="320" text-anchor="middle" class="serif-t" font-size="14">ExactSplit</text>
+          <text x="220" y="338" text-anchor="middle" class="mono-t" font-size="9" fill="#6c6358">EXACT</text>
+          <text x="220" y="356" text-anchor="middle" class="mono-t" font-size="9">Σ amounts = total</text>
+          <text x="220" y="370" text-anchor="middle" class="mono-t" font-size="9" fill="#6c6358">user supplies each</text>
+
+          <rect x="320" y="300" width="120" height="80" fill="#fff" stroke="#161310" stroke-width="1.5"/>
+          <text x="380" y="320" text-anchor="middle" class="serif-t" font-size="14">PercentageSplit</text>
+          <text x="380" y="338" text-anchor="middle" class="mono-t" font-size="9" fill="#6c6358">PERCENTAGE</text>
+          <text x="380" y="356" text-anchor="middle" class="mono-t" font-size="9">Σ % = 100</text>
+          <text x="380" y="370" text-anchor="middle" class="mono-t" font-size="9" fill="#6c6358">total × p / 100</text>
+
+          <rect x="460" y="300" width="120" height="80" fill="#fff" stroke="#161310" stroke-width="1.5"/>
+          <text x="520" y="320" text-anchor="middle" class="serif-t" font-size="14">SharesSplit</text>
+          <text x="520" y="338" text-anchor="middle" class="mono-t" font-size="9" fill="#6c6358">SHARES</text>
+          <text x="520" y="356" text-anchor="middle" class="mono-t" font-size="9">total × s / Σs</text>
+          <text x="520" y="370" text-anchor="middle" class="mono-t" font-size="9" fill="#6c6358">weighted ratio</text>
+        </g>
+
+        <!-- consumer -->
+        <rect x="120" y="430" width="360" height="80" fill="#fff" stroke="#161310" stroke-width="1.5"/>
+        <text x="300" y="452" text-anchor="middle" class="serif-t" font-size="16">ExpenseService</text>
+        <text x="300" y="472" text-anchor="middle" class="mono-t" font-size="10" fill="#6c6358">strategy = registry.get(type)</text>
+        <text x="300" y="488" text-anchor="middle" class="mono-t" font-size="10" fill="#6c6358">strategy.validate(...) → strategy.split(...)</text>
+        <line x1="300" y1="430" x2="300" y2="380" stroke="#161310" stroke-width="1.2" stroke-dasharray="3 3" marker-end="url(#seqArrOpen)"/>
+      </svg>
+    </div>
+  </div>
+
+  <div class="cap">
+    <span>FIG 5.0 — Strategy + Registry pattern</span>
+    <span>Source: Services/Split/*</span>
+  </div>
+</section>
+
+
+<!-- ═══════════════════════ APPENDIX · ENDPOINT MAP ═══════════════════════ -->
+<section id="appendix">
+  <div class="sect-head">
+    <span class="num">A</span>
+    <h2 class="serif">Endpoint <em>map</em></h2>
+    <span class="desc">All HTTP entry points exposed by the service, grouped by controller.</span>
+  </div>
+  <div class="sect-rule"></div>
+
+  <div class="diagram-frame" style="padding:0;">
+    <table style="width:100%; border-collapse:collapse; font-family:'JetBrains Mono', monospace; font-size:12px;">
+      <thead>
+        <tr style="background:#161310; color:#fbf7ec; text-align:left;">
+          <th style="padding:10px 16px; width:100px;">Method</th>
+          <th style="padding:10px 16px;">Path</th>
+          <th style="padding:10px 16px;">Controller</th>
+          <th style="padding:10px 16px;">Auth</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-top:1px solid #161310;"><td style="padding:8px 16px;color:#15803d;"><b>POST</b></td><td style="padding:8px 16px;">/auth/register</td><td style="padding:8px 16px;">AuthController</td><td style="padding:8px 16px;color:#6c6358;">public</td></tr>
+        <tr style="border-top:1px solid #161310;background:#fbf7ec;"><td style="padding:8px 16px;color:#15803d;"><b>POST</b></td><td style="padding:8px 16px;">/auth/login</td><td style="padding:8px 16px;">AuthController</td><td style="padding:8px 16px;color:#6c6358;">public</td></tr>
+        <tr style="border-top:1px solid #161310;"><td style="padding:8px 16px;color:#1e3a8a;"><b>GET</b></td><td style="padding:8px 16px;">/hello</td><td style="padding:8px 16px;">HeartBeatController</td><td style="padding:8px 16px;color:#6c6358;">public</td></tr>
+        <tr style="border-top:1px solid #161310;background:#fbf7ec;"><td style="padding:8px 16px;color:#1e3a8a;"><b>GET</b></td><td style="padding:8px 16px;">/api/v1/user/me</td><td style="padding:8px 16px;">UserController</td><td style="padding:8px 16px;color:#6c6358;">JWT</td></tr>
+        <tr style="border-top:1px solid #161310;"><td style="padding:8px 16px;color:#1e3a8a;"><b>GET</b></td><td style="padding:8px 16px;">/api/friendships</td><td style="padding:8px 16px;">FriendshipController</td><td style="padding:8px 16px;color:#6c6358;">JWT</td></tr>
+        <tr style="border-top:1px solid #161310;background:#fbf7ec;"><td style="padding:8px 16px;color:#15803d;"><b>POST</b></td><td style="padding:8px 16px;">/api/friendships/requests/{id}</td><td style="padding:8px 16px;">FriendshipController</td><td style="padding:8px 16px;color:#6c6358;">JWT</td></tr>
+        <tr style="border-top:1px solid #161310;"><td style="padding:8px 16px;color:#15803d;"><b>POST</b></td><td style="padding:8px 16px;">/api/friendships/requests/{id}/accept</td><td style="padding:8px 16px;">FriendshipController</td><td style="padding:8px 16px;color:#6c6358;">JWT</td></tr>
+        <tr style="border-top:1px solid #161310;background:#fbf7ec;"><td style="padding:8px 16px;color:#15803d;"><b>POST</b></td><td style="padding:8px 16px;">/api/friendships/requests/{id}/reject</td><td style="padding:8px 16px;">FriendshipController</td><td style="padding:8px 16px;color:#6c6358;">JWT</td></tr>
+        <tr style="border-top:1px solid #161310;"><td style="padding:8px 16px;color:#15803d;"><b>POST</b></td><td style="padding:8px 16px;">/api/friendships/{id}/block</td><td style="padding:8px 16px;">FriendshipController</td><td style="padding:8px 16px;color:#6c6358;">JWT</td></tr>
+        <tr style="border-top:1px solid #161310;background:#fbf7ec;"><td style="padding:8px 16px;color:#1e3a8a;"><b>GET</b></td><td style="padding:8px 16px;">/groups · /groups/{id}</td><td style="padding:8px 16px;">GroupController</td><td style="padding:8px 16px;color:#6c6358;">JWT</td></tr>
+        <tr style="border-top:1px solid #161310;"><td style="padding:8px 16px;color:#15803d;"><b>POST</b></td><td style="padding:8px 16px;">/groups</td><td style="padding:8px 16px;">GroupController</td><td style="padding:8px 16px;color:#6c6358;">JWT</td></tr>
+        <tr style="border-top:1px solid #161310;background:#fbf7ec;"><td style="padding:8px 16px;color:#15803d;"><b>POST/DEL</b></td><td style="padding:8px 16px;">/groups/{id}/members/{userId}</td><td style="padding:8px 16px;">GroupController</td><td style="padding:8px 16px;color:#6c6358;">JWT (admin of group)</td></tr>
+        <tr style="border-top:1px solid #161310;"><td style="padding:8px 16px;color:#15803d;"><b>POST</b></td><td style="padding:8px 16px;">/groups/{id}/leave</td><td style="padding:8px 16px;">GroupController</td><td style="padding:8px 16px;color:#6c6358;">JWT</td></tr>
+        <tr style="border-top:1px solid #161310;background:#fbf7ec;"><td style="padding:8px 16px;color:#15803d;"><b>POST</b></td><td style="padding:8px 16px;">/groups/{id}/expenses</td><td style="padding:8px 16px;">GroupController</td><td style="padding:8px 16px;color:#6c6358;">JWT (member)</td></tr>
+        <tr style="border-top:1px solid #161310;"><td style="padding:8px 16px;color:#1e3a8a;"><b>GET</b></td><td style="padding:8px 16px;">/groups/{id}/expenses</td><td style="padding:8px 16px;">GroupController</td><td style="padding:8px 16px;color:#6c6358;">JWT (member)</td></tr>
+        <tr style="border-top:1px solid #161310;background:#fbf7ec;"><td style="padding:8px 16px;color:#15803d;"><b>POST</b></td><td style="padding:8px 16px;">/groups/{id}/simplify-debts</td><td style="padding:8px 16px;">GroupController</td><td style="padding:8px 16px;color:#6c6358;">JWT (member)</td></tr>
+        <tr style="border-top:1px solid #161310;"><td style="padding:8px 16px;color:#15803d;"><b>POST</b></td><td style="padding:8px 16px;">/api/expenses</td><td style="padding:8px 16px;">ExpenseController</td><td style="padding:8px 16px;color:#6c6358;">JWT</td></tr>
+        <tr style="border-top:1px solid #161310;background:#fbf7ec;"><td style="padding:8px 16px;color:#c2410c;"><b>DELETE</b></td><td style="padding:8px 16px;">/api/expenses/{id}</td><td style="padding:8px 16px;">ExpenseController</td><td style="padding:8px 16px;color:#6c6358;">JWT (creator)</td></tr>
+        <tr style="border-top:1px solid #161310;"><td style="padding:8px 16px;color:#1e3a8a;"><b>GET</b></td><td style="padding:8px 16px;">/api/expenses/me</td><td style="padding:8px 16px;">ExpenseController</td><td style="padding:8px 16px;color:#6c6358;">JWT</td></tr>
+        <tr style="border-top:1px solid #161310;background:#fbf7ec;"><td style="padding:8px 16px;color:#1e3a8a;"><b>GET</b></td><td style="padding:8px 16px;">/api/expenses/with/{friendId}</td><td style="padding:8px 16px;">ExpenseController</td><td style="padding:8px 16px;color:#6c6358;">JWT</td></tr>
+        <tr style="border-top:1px solid #161310;"><td style="padding:8px 16px;color:#1e3a8a;"><b>GET</b></td><td style="padding:8px 16px;">/api/expenses/categories</td><td style="padding:8px 16px;">ExpenseController</td><td style="padding:8px 16px;color:#6c6358;">JWT</td></tr>
+        <tr style="border-top:1px solid #161310;background:#fbf7ec;"><td style="padding:8px 16px;color:#1e3a8a;"><b>GET</b></td><td style="padding:8px 16px;">/api/balances/me</td><td style="padding:8px 16px;">BalanceController</td><td style="padding:8px 16px;color:#6c6358;">JWT</td></tr>
+        <tr style="border-top:1px solid #161310;"><td style="padding:8px 16px;color:#1e3a8a;"><b>GET</b></td><td style="padding:8px 16px;">/api/balances/friends · /friends/{id}</td><td style="padding:8px 16px;">BalanceController</td><td style="padding:8px 16px;color:#6c6358;">JWT</td></tr>
+        <tr style="border-top:1px solid #161310;background:#fbf7ec;"><td style="padding:8px 16px;color:#15803d;"><b>POST</b></td><td style="padding:8px 16px;">/api/balances/settle/friend/{id}</td><td style="padding:8px 16px;">BalanceController</td><td style="padding:8px 16px;color:#6c6358;">JWT</td></tr>
+        <tr style="border-top:1px solid #161310;"><td style="padding:8px 16px;color:#15803d;"><b>POST</b></td><td style="padding:8px 16px;">/api/balances/settle/group/{gid}/{fid}</td><td style="padding:8px 16px;">BalanceController</td><td style="padding:8px 16px;color:#6c6358;">JWT (member)</td></tr>
+        <tr style="border-top:1px solid #161310;background:#fbf7ec;"><td style="padding:8px 16px;color:#15803d;"><b>POST</b></td><td style="padding:8px 16px;">/api/balances/settle/full/{id}</td><td style="padding:8px 16px;">BalanceController</td><td style="padding:8px 16px;color:#6c6358;">JWT</td></tr>
+        <tr style="border-top:1px solid #161310;"><td style="padding:8px 16px;color:#1e3a8a;"><b>GET</b></td><td style="padding:8px 16px;">/api/balances/settlements/me</td><td style="padding:8px 16px;">BalanceController</td><td style="padding:8px 16px;color:#6c6358;">JWT</td></tr>
+        <tr style="border-top:1px solid #161310;background:#fbf7ec;"><td style="padding:8px 16px;color:#1e3a8a;"><b>GET</b></td><td style="padding:8px 16px;">/admin/users</td><td style="padding:8px 16px;">AdminController</td><td style="padding:8px 16px;color:#c2410c;">ROLE_ADMIN</td></tr>
+        <tr style="border-top:1px solid #161310;"><td style="padding:8px 16px;color:#1e3a8a;"><b>GET</b></td><td style="padding:8px 16px;">/weather/current · /weather/city</td><td style="padding:8px 16px;">WeatherController</td><td style="padding:8px 16px;color:#6c6358;">JWT</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<footer style="margin-top:48px; padding-top:18px; border-top:1.5px solid var(--ink); display:flex; justify-content:space-between; align-items:center;">
+  <span class="mono" style="font-size:11px; color:var(--muted); letter-spacing:.1em;">letsSplitIt · System Design Document · SD-001</span>
+  <span class="serif" style="font-style:italic; color:var(--ink-2);">Generated from source · com.jay.LetsSplitIt</span>
+  <span class="mono" style="font-size:11px; color:var(--muted); letter-spacing:.1em;">Page 1 / 1</span>
+</footer>
+
+</div>
+<script>
+  (async () => {
+    try { if (document.fonts && document.fonts.ready) await document.fonts.ready; } catch (e) {}
+    await new Promise(r => window.addEventListener('load', r, { once: true }));
+    setTimeout(() => window.print(), 600);
+  })();
+</script>
+</body>
+</html>
