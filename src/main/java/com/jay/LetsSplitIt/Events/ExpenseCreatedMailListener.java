@@ -51,14 +51,20 @@ public class ExpenseCreatedMailListener {
     }
 
     private void sendMail(User debtor, User payer, ExpenseShare share, ExpenseCreatedEvent event) {
-        String subject = "New expense: you owe " + share.amountOwed() + " to " + payer.getName();
-        String body = "Hi " + debtor.getName() + ",\n\n"
-                + payer.getName() + " added a new expense on LetsSplitIt.\n\n"
-                + "Total amount: " + event.totalAmount() + "\n"
-                + "Split type: " + event.splitType() + "\n"
-                + "Your share: " + share.amountOwed() + "\n\n"
-                + "Open the app to review and settle up.\n\n"
-                + "— LetsSplitIt";
-        mailService.sendSimpleMail(debtor.getEmail(), subject, body);
+        String subject = "New expense \"" + event.title() + "\": you owe " + share.amountOwed() + " to " + payer.getName();
+        StringBuilder body = new StringBuilder()
+                .append("Hi ").append(debtor.getName()).append(",\n\n")
+                .append(payer.getName()).append(" added a new expense on LetsSplitIt.\n\n")
+                .append("Title: ").append(event.title()).append("\n")
+                .append("Category: ").append(event.category()).append("\n");
+        if (event.description() != null && !event.description().isBlank()) {
+            body.append("Description: ").append(event.description()).append("\n");
+        }
+        body.append("Total amount: ").append(event.totalAmount()).append("\n")
+                .append("Split type: ").append(event.splitType()).append("\n")
+                .append("Your share: ").append(share.amountOwed()).append("\n\n")
+                .append("Open the app to review and settle up.\n\n")
+                .append("— LetsSplitIt");
+        mailService.sendSimpleMail(debtor.getEmail(), subject, body.toString());
     }
 }

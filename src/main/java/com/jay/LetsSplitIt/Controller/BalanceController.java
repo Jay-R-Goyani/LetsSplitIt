@@ -4,7 +4,11 @@ import com.jay.LetsSplitIt.Dto.BalanceSummary;
 import com.jay.LetsSplitIt.Dto.FriendBalance;
 import com.jay.LetsSplitIt.Dto.SettleRequest;
 import com.jay.LetsSplitIt.Dto.SettleResponse;
+import com.jay.LetsSplitIt.Entities.Settlement;
 import com.jay.LetsSplitIt.Services.BalanceService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -63,5 +67,11 @@ public class BalanceController {
     public ResponseEntity<SettleResponse> settleFull(@AuthenticationPrincipal UserDetails userDetails,
                                                      @PathVariable UUID friendId) {
         return ResponseEntity.ok(balanceService.settleFull(userDetails, friendId));
+    }
+
+    @GetMapping("/settlements/me")
+    public ResponseEntity<Page<Settlement>> mySettlements(@AuthenticationPrincipal UserDetails userDetails,
+                                                          @PageableDefault(size = 10) Pageable pageable) {
+        return ResponseEntity.ok(balanceService.getMySettlements(userDetails, pageable));
     }
 }

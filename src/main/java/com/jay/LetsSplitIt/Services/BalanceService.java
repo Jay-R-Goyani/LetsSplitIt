@@ -6,11 +6,15 @@ import com.jay.LetsSplitIt.Dto.SettleResponse;
 import com.jay.LetsSplitIt.Dto.SettlementCreatedEvent;
 import com.jay.LetsSplitIt.Entities.Group;
 import com.jay.LetsSplitIt.Entities.PairBalance;
+import com.jay.LetsSplitIt.Entities.Settlement;
 import com.jay.LetsSplitIt.Entities.User;
 import com.jay.LetsSplitIt.Repository.GroupRepository;
 import com.jay.LetsSplitIt.Repository.PairBalanceRepository;
+import com.jay.LetsSplitIt.Repository.SettlementRepository;
 import com.jay.LetsSplitIt.Repository.UserRepository;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -34,15 +38,18 @@ public class BalanceService {
     private final PairBalanceRepository pairBalanceRepository;
     private final UserRepository userRepository;
     private final GroupRepository groupRepository;
+    private final SettlementRepository settlementRepository;
     private final ApplicationEventPublisher eventPublisher;
 
     BalanceService(PairBalanceRepository pairBalanceRepository,
                    UserRepository userRepository,
                    GroupRepository groupRepository,
+                   SettlementRepository settlementRepository,
                    ApplicationEventPublisher eventPublisher) {
         this.pairBalanceRepository = pairBalanceRepository;
         this.userRepository = userRepository;
         this.groupRepository = groupRepository;
+        this.settlementRepository = settlementRepository;
         this.eventPublisher = eventPublisher;
     }
 
@@ -239,7 +246,23 @@ public class BalanceService {
         if (response.amountSettled() == null || response.amountSettled().signum() <= 0) {
             return;
         }
+        Settlement audit = new Settlement(
+                null,
+                response.payerId(),
+                response.receiverId(),
+                response.groupId(),
+                response.amountSettled(),
+                response.scope(),
+                null
+        );
+        settlementRepository.save(audit);
         eventPublisher.publishEvent(new SettlementCreatedEvent(response));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<Settlement> getMySettlements(UserDetails userDetails, Pageable pageable) {
+        UUID me = currentUserId(userDetails);
+        return settlementRepository.findActivityForUser(me, pageable);
     }
 
     private void validateSettlement(UUID me, UUID friendId, BigDecimal amount) {

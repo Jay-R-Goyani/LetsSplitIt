@@ -16,12 +16,16 @@ import com.jay.LetsSplitIt.Repository.UserRepository;
 import com.jay.LetsSplitIt.Services.Split.SplitStrategy;
 import com.jay.LetsSplitIt.Services.Split.SplitStrategyRegistry;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -62,6 +66,13 @@ public class ExpenseService {
 
     @Transactional
     public ExpenseResponse createExpense(UserDetails userDetails, ExpenseRequest request, UUID groupId) {
+        if (request.title() == null || request.title().isBlank()) {
+            throw new IllegalArgumentException("Title is required");
+        }
+        if (request.category() == null) {
+            throw new IllegalArgumentException("Category is required");
+        }
+
         SplitStrategy strategy = registry.get(request.splitType());
         strategy.validate(request.amount(), request.participants());
         List<ExpenseShare> shares = strategy.split(request.amount(), request.participants());
@@ -77,6 +88,9 @@ public class ExpenseService {
         expense.setAmount(request.amount());
         expense.setSplitType(request.splitType());
         expense.setGroupId(groupId);
+        expense.setTitle(request.title().trim());
+        expense.setCategory(request.category());
+        expense.setDescription(request.description());
 
         Expense saved = expenseRepository.save(expense);
 
@@ -93,6 +107,9 @@ public class ExpenseService {
         eventPublisher.publishEvent(new ExpenseCreatedEvent(
                 saved.getId(),
                 saved.getPaidBy(),
+                saved.getTitle(),
+                saved.getCategory(),
+                saved.getDescription(),
                 saved.getSplitType(),
                 saved.getAmount(),
                 shares
@@ -101,8 +118,48 @@ public class ExpenseService {
         return new ExpenseResponse(
                 saved.getId(),
                 saved.getPaidBy(),
+                saved.getTitle(),
+                saved.getCategory(),
+                saved.getDescription(),
                 saved.getAmount(),
                 saved.getSplitType(),
+                shares
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ExpenseResponse> getMyActivity(UserDetails userDetails, Pageable pageable) {
+        UUID me = currentUserId(userDetails);
+        return expenseRepository.findActivityForUser(me, pageable).map(this::toResponse);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<ExpenseResponse> getActivityWithFriend(UserDetails userDetails, UUID friendId, Pageable pageable) {
+        UUID me = currentUserId(userDetails);
+        if (me.equals(friendId)) {
+            throw new IllegalArgumentException("Cannot fetch activity with self");
+        }
+        return expenseRepository.findActivityWithFriend(me, friendId, pageable).map(this::toResponse);
+    }
+
+    private ExpenseResponse toResponse(Expense expense) {
+        List<ExpenseShare> shares = new ArrayList<>();
+        BigDecimal payerShare = expense.getAmount();
+        for (SharedExpense row : expense.getShares()) {
+            shares.add(new ExpenseShare(row.getUserId(), row.getAmount()));
+            payerShare = payerShare.subtract(row.getAmount());
+        }
+        if (payerShare.signum() > 0) {
+            shares.add(new ExpenseShare(expense.getPaidBy(), payerShare));
+        }
+        return new ExpenseResponse(
+                expense.getId(),
+                expense.getPaidBy(),
+                expense.getTitle(),
+                expense.getCategory(),
+                expense.getDescription(),
+                expense.getAmount(),
+                expense.getSplitType(),
                 shares
         );
     }

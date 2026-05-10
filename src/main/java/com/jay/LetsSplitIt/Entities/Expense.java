@@ -50,6 +50,18 @@ public class Expense {
     @Column(name = "group_id")
     private UUID groupId;
 
+    @NonNull
+    @Column(nullable = false, length = 200)
+    private String title;
+
+    @Column(length = 1000)
+    private String description;
+
+    @NonNull
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private Category category;
+
     @OneToMany(mappedBy = "expense", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @ToString.Exclude
     private List<SharedExpense> shares = new ArrayList<>();
@@ -64,5 +76,9 @@ public class Expense {
 
     public enum SplitType {
         EQUAL, EXACT, PERCENTAGE, SHARES
+    }
+
+    public enum Category {
+        FOOD, TRAVEL, SHOPPING, BILLS, OTHER
     }
 }

@@ -6,7 +6,10 @@ import com.jay.LetsSplitIt.Repository.UserRepository;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 
@@ -73,6 +76,19 @@ public class FriendshipService {
         Friendship friendship = findAcceptedFriendship(userId, friendId);
         friendship.setStatus(Friendship.Status.BLOCKED);
         friendshipRepository.save(friendship);
+    }
+
+    @Transactional(readOnly = true)
+    public List<UUID> listAcceptedFriendIds(UserDetails userDetails) {
+        UUID me = currentUserId(userDetails);
+        List<UUID> friends = new ArrayList<>();
+        for (Friendship f : friendshipRepository.findBySentByAndStatus(me, Friendship.Status.ACCEPTED)) {
+            friends.add(f.getSentTo());
+        }
+        for (Friendship f : friendshipRepository.findBySentToAndStatus(me, Friendship.Status.ACCEPTED)) {
+            friends.add(f.getSentBy());
+        }
+        return friends;
     }
 
     private UUID currentUserId(UserDetails userDetails) {
